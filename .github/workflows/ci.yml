@@ -39,8 +39,8 @@ jobs:
       GOOGLE_CLIENT_SECRET: ""
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: jdx/mise-action@v2
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
       - run: nci
 
       # 拡張は drizzle-kit の migration に含まれないので先に作る
@@ -98,8 +98,8 @@ jobs:
       GOOGLE_CLIENT_SECRET: ""
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: jdx/mise-action@v2
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
       - run: nci
 
       - name: Install Playwright browser
@@ -111,7 +111,7 @@ jobs:
       - run: nr test:e2e
 
       # failure() だと flaky（retry で通った）ケースの trace が取れない
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: playwright-report
