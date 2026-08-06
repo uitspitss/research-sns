@@ -1,0 +1,36 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+
+# Turborepo
+.turbo/
+
+# 環境変数（dotenvx）。暗号化された .env はコミットする。復号キーだけ除外する
+.env.keys
+.env.local
+
+# Vercel
+.vercel/
+
+.DS_Store
+
+.playwright-mcp/
+
+# Playwright（E2E）。e2e/.auth には有効なセッション Cookie が入る
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+e2e/.auth/
+.claude/*.log
+.claude/sessions/
+.claude/settings.local.json
+.claude/team-state.md
+
+*storybook.log
+storybook-static

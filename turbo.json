@@ -1,0 +1,18 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+
+  // 環境変数は dotenvx がタスク内で注入するので turbo からは見えない。
+  // 代わりに暗号化された .env のハッシュでキャッシュを判定させる。
+  "globalDependencies": [".env"],
+
+  "tasks": {
+    "dev:next": {
+      "cache": false,
+      "persistent": true
+    },
+    "db:studio": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

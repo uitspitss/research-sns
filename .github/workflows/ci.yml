@@ -1,0 +1,119 @@
+name: CI
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    # build 時に ISR のページが DB を引くので、CI 内に使い捨ての Postgres を立てる。
+    # 本番の Neon には触らせない（fork PR に secrets が渡らない問題も避けられる）。
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: research_sns
+          POSTGRES_PASSWORD: research_sns
+          POSTGRES_DB: research_sns
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U research_sns -d research_sns"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    # CI には .env.keys（復号キー）を置かないので、dotenvx は .env を復号できない。
+    # 環境変数が既にセットされていれば dotenvx はそれを上書きしないため、
+    # **アプリが使う変数はここで全部埋める**こと。
+    # 埋め漏らすと、その変数には暗号文（"encrypted:..."）がそのまま入る。
+    env:
+      DATABASE_URL: postgres://research_sns:research_sns@localhost:5432/research_sns
+      # 実際の OAuth は CI では使わないので、起動に足りるだけのダミー値
+      BETTER_AUTH_SECRET: ci-secret-not-used-for-anything-real-0000
+      BETTER_AUTH_URL: http://localhost:3000
+      GOOGLE_CLIENT_ID: ""
+      GOOGLE_CLIENT_SECRET: ""
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+      - run: nci
+
+      # 拡張は drizzle-kit の migration に含まれないので先に作る
+      # （ローカルの db/init/01-extensions.sql と同じ内容）
+      - name: Create extensions
+        run: psql "$DATABASE_URL" -f db/init/01-extensions.sql
+        env:
+          PGPASSWORD: research_sns
+
+      - run: nr db:migrate
+
+      # `nr test` の storybook プロジェクトは Chromium 実機で走るので、
+      # ブラウザバイナリを先に入れる。バージョンは playwright の package.json に従う
+      - name: Install Playwright browser
+        run: na exec playwright install --with-deps chromium
+
+      - run: nr lint
+      - run: nr format:check
+      - run: nr typecheck
+      - run: nr test
+      - run: nr build
+      - run: nr build-storybook
+      - run: nr knip
+
+  # E2E は ci ジョブに同居させない。サーバーの起動と DB が要るので、
+  # 同じジョブに置くと lint の失敗を待ってから動くことになる
+  e2e:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: research_sns
+          POSTGRES_PASSWORD: research_sns
+          POSTGRES_DB: research_sns
+        ports:
+          # ローカルと同じ 5432。E2E 用のデータベース（research_sns_e2e）と拡張は
+          # e2e/prepare-db.ts が無ければ作るので、ここでは素の Postgres でよい
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U research_sns -d research_sns"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    # ci ジョブと同じ理由で全部列挙する（埋め漏らすと暗号文が値になる）。
+    # DATABASE_URL は playwright.config.ts の webServer.env が上書きするが、
+    # dotenvx を通す他のコマンドのために埋めておく
+    env:
+      DATABASE_URL: postgres://research_sns:research_sns@localhost:5432/research_sns_e2e
+      BETTER_AUTH_SECRET: e2e-secret-not-used-for-anything-real-0000
+      BETTER_AUTH_URL: http://localhost:3100
+      GOOGLE_CLIENT_ID: ""
+      GOOGLE_CLIENT_SECRET: ""
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+      - run: nci
+
+      - name: Install Playwright browser
+        run: na exec playwright install --with-deps chromium
+
+      # ビルドは playwright の webServer が行う。ここで `nr build` しないのは、
+      # ISR のページが**ビルド時の DB の内容で焼き固まる**ため。
+      # webServer.env が build と start の両方に E2E の接続先を渡す
+      - run: nr test:e2e
+
+      # failure() だと flaky（retry で通った）ケースの trace が取れない
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

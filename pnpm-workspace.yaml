@@ -1,0 +1,13 @@
+# pnpm 11 以降、設定の置き場所は package.json の "pnpm" フィールドではなくこのファイル。
+# https://pnpm.io/settings
+
+# packageManager フィールドを見て pnpm が自バージョンを切り替えるのを抑止する。
+# バージョンは mise.toml でピンしているので、そちらに従わせる。
+managePackageManagerVersions: false
+
+# pnpm 10+ はサプライチェーン対策で postinstall をデフォルトでスキップする。
+# ネイティブ build が必要なものだけ明示的に許可する。
+allowBuilds:
+  sharp: true
+  esbuild: true
+  lefthook: true

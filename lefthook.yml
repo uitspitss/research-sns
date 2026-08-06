@@ -1,0 +1,30 @@
+# `na exec` なのは、`nlx`（= pnpm dlx）だと registry から取り直してピンしたバージョンと食い違うため。
+
+pre-commit:
+  jobs:
+    - name: encrypt-env
+      glob: ".env*"
+      exclude: ".env.keys"
+      run: na exec dotenvx encrypt
+      stage_fixed: true
+
+    # lint -> format の順。oxlint の --fix のあとに oxfmt が最終整形する
+    - name: lint
+      glob: "*.{ts,tsx,js,jsx}"
+      run: na exec oxlint --fix {staged_files}
+      stage_fixed: true
+
+    - name: format
+      glob: "*.{ts,tsx,js,jsx}"
+      run: na exec oxfmt {staged_files}
+      stage_fixed: true
+
+    # nr 経由なのは tsc の前に next typegen を通す必要があるため
+    - name: typecheck
+      run: nr typecheck
+
+# knip は全体走査が要るので staged 単位に絞れない。毎コミットは煩わしいので pre-push に置く
+pre-push:
+  jobs:
+    - name: knip
+      run: nr knip

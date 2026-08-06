@@ -1,0 +1,22 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "project": ["{app,components,lib,db,types,e2e}/**/*.{ts,tsx,css}"],
+  // knip の Playwright プラグインは *.spec.ts しか entry と見なさない。
+  // playwright.config.ts の projects が testMatch で拾う *.setup.ts を足さないと、
+  // auth.setup.ts とそこから辿る auth-instance.ts が未使用ファイル扱いになる
+  "playwright": {
+    "config": ["playwright.config.ts"],
+    "entry": ["e2e/**/*.@(spec|setup).ts"]
+  },
+  "ignoreIssues": {
+    "components/ui/**": ["exports", "types"],
+    // fixture / env / db ヘルパは spec からしか使われない。knip の
+    // Playwright プラグインは spec を entry として辿るが、定数の一部だけを
+    // 使うファイルは未使用 export に見える
+    "e2e/**": ["exports"]
+  },
+  "rules": {
+    "devDependencies": "warn",
+    "exports": "warn"
+  }
+}

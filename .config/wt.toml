@@ -1,0 +1,6 @@
+[pre-start]
+# これがないと worktree で mise.toml が信頼されず、ピンしたバージョンが使われない
+trust = "mise trust"
+install = "ni"
+
+# copy-ignored は不要。.env は暗号化されて git 管理下にあるので worktree に付いてくる

@@ -1,0 +1,4 @@
+[tools]
+node = "24.15.0"
+"npm:@antfu/ni" = "30.3.0"
+pnpm = "11.19.0"

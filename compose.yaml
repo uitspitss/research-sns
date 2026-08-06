@@ -1,0 +1,24 @@
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: research-sns-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: research_sns
+      POSTGRES_PASSWORD: research_sns
+      POSTGRES_DB: research_sns
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      # postgres:18 で PGDATA の既定が変わったので /var/lib/postgresql/data には置けない
+      - db-data:/var/lib/postgresql
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U research_sns -d research_sns"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  db-data:

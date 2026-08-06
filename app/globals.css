@@ -1,0 +1,119 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/*
+ * ダークモードは持たない。この配色は「紙」を前提に組んであって、反転させると
+ * 成立しない。variant の宣言だけ残してあるのは shadcn/tailwind.css が
+ * `@variant dark` を使うため。`.dark` を付ける場所がないので実質無効。
+ */
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * 元の globals.css が持っていた「紙とインク」の変数を shadcn のセマンティック
+ * トークンに移したもの。対応は下の通り。
+ *
+ *   paper       -> background
+ *   paper-raise -> card / popover / muted / secondary / accent
+ *   ink         -> foreground
+ *   muted       -> muted-foreground
+ *   rule        -> border / input
+ *   accent      -> primary / ring
+ *   accent-soft -> trail
+ *
+ * 注意: 元の --accent（#0E6B60 のティール）は shadcn では primary にあたる。
+ * shadcn の --accent は「hover 時の淡い背景」を指す別物なので、paper-raise を割り当てている。
+ */
+:root {
+  --background: #e8ebe5;
+  --foreground: #17201b;
+  --card: #f3f5ef;
+  --card-foreground: #17201b;
+  --popover: #f3f5ef;
+  --popover-foreground: #17201b;
+  --primary: #0e6b60;
+  --primary-foreground: #f3f5ef;
+  --secondary: #f3f5ef;
+  --secondary-foreground: #17201b;
+  --muted: #f3f5ef;
+  --muted-foreground: #66746b;
+  --accent: #f3f5ef;
+  --accent-foreground: #0e6b60;
+  --destructive: #8c3a2e;
+  --border: #cbd2c7;
+  --input: #cbd2c7;
+  --ring: #0e6b60;
+
+  /* 経路（PathTrail）のノード枠線と連結線。この製品固有のトークン */
+  --trail: #a8c4be;
+
+  /* 罫線 1px・角丸 2px が元の設計。段階は持たせない */
+  --radius: 2px;
+
+  --serif: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --sans:
+    "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", system-ui, -apple-system,
+    sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-trail: var(--trail);
+
+  --radius-sm: var(--radius);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius);
+  --radius-xl: var(--radius);
+  --radius-2xl: var(--radius);
+  --radius-3xl: var(--radius);
+  --radius-4xl: var(--radius);
+
+  --font-sans: var(--sans);
+  --font-serif: var(--serif);
+  --font-mono: var(--mono);
+  --font-heading: var(--serif);
+
+  /* 元の CSS が見出しを縮めていた 520px。Tailwind 既定の sm(640px) より手前 */
+  --breakpoint-xs: 32.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans text-[15px] leading-[1.85] antialiased;
+  }
+
+  /* 文中の `POST /api/entries` のようなエンドポイント表記。数箇所に出るので base に置く */
+  code {
+    @apply rounded-sm border bg-card px-1.5 py-0.5 font-mono text-xs;
+  }
+}
+
+/* 元の globals.css から引き継ぐ、アニメーション全体の停止 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
