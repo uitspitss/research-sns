@@ -68,6 +68,46 @@ export function searchEntries(query: string, limit = 50): Promise<EntrySummary[]
     .limit(limit);
 }
 
+/**
+ * handle と検索語のどちらでも、両方でも、どちらでもなくても引ける一般形。
+ * 上の3つは画面ごとに固定の引き方をするので残してある。こちらは
+ * MCP の search_entries と GET /api/entries のように、条件が呼び出し時まで
+ * 決まらない経路のためのもの。
+ */
+export type EntryQuery = { handle?: string | undefined; q?: string | undefined; limit?: number };
+
+const entryFilters = ({ handle, q }: EntryQuery) =>
+  [
+    handle ? eq(user.handle, handle) : undefined,
+    q ? ilike(entry.searchText, `%${q}%`) : undefined,
+  ].filter((f) => f !== undefined);
+
+/** 一覧向け。本文は引かない */
+export function queryEntries({ limit = 20, ...where }: EntryQuery): Promise<EntrySummary[]> {
+  const filters = entryFilters(where);
+
+  return db
+    .select(listColumns)
+    .from(entry)
+    .innerJoin(user, eq(user.id, entry.userId))
+    .where(filters.length > 0 ? and(...filters) : undefined)
+    .orderBy(desc(entry.createdAt))
+    .limit(limit);
+}
+
+/** 同じ条件で本文まで引く。GET /api/entries はこちらを使う */
+export function queryEntryDetails({ limit = 20, ...where }: EntryQuery): Promise<EntryDetail[]> {
+  const filters = entryFilters(where);
+
+  return db
+    .select(detailColumns)
+    .from(entry)
+    .innerJoin(user, eq(user.id, entry.userId))
+    .where(filters.length > 0 ? and(...filters) : undefined)
+    .orderBy(desc(entry.createdAt))
+    .limit(limit);
+}
+
 export async function findEntry(handle: string, slug: string): Promise<EntryDetail | undefined> {
   const rows = await db
     .select(detailColumns)

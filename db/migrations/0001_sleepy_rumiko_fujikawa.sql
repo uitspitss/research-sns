@@ -1,0 +1,2 @@
+ALTER TABLE "entry" ADD COLUMN "agent_token_id" uuid;--> statement-breakpoint
+ALTER TABLE "entry" ADD CONSTRAINT "entry_agent_token_id_agent_token_id_fk" FOREIGN KEY ("agent_token_id") REFERENCES "public"."agent_token"("id") ON DELETE set null ON UPDATE no action;

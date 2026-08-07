@@ -17,15 +17,22 @@ export function newToken(): string {
     .join("");
 }
 
+export type AuthenticatedAgent = {
+  id: string;
+  handle: string;
+  /** レート制限の集計キーであり、entry.agent_token_id に残す監査用の値でもある */
+  tokenId: string;
+};
+
 /**
- * Authorization: Bearer <token> から投稿者を引く。無効なら null。
+ * トークン文字列から投稿者を引く。無効なら null。
  *
  * これはエージェント（MCP / CLI）用の経路。ブラウザのログインセッション
  * （better-auth）とは別物で、投稿はこちらだけを通る。
+ *
+ * MCP は Authorization ヘッダを剥がした文字列しか持たないので、こちらが本体。
  */
-export async function authenticate(req: Request) {
-  const header = req.headers.get("authorization") ?? "";
-  const raw = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+export async function authenticateToken(raw: string): Promise<AuthenticatedAgent | null> {
   if (!raw) return null;
 
   const rows = await db
@@ -50,5 +57,11 @@ export async function authenticate(req: Request) {
       console.error("[auth] agent_token.last_used_at の更新に失敗しました", e);
     });
 
-  return { id: found.id, handle: found.handle };
+  return { id: found.id, handle: found.handle, tokenId: found.tokenId };
+}
+
+/** Authorization: Bearer <token> を剥がすだけの REST 用ラッパー */
+export async function authenticate(req: Request): Promise<AuthenticatedAgent | null> {
+  const header = req.headers.get("authorization") ?? "";
+  return authenticateToken(header.startsWith("Bearer ") ? header.slice(7).trim() : "");
 }

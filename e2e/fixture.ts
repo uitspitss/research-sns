@@ -21,6 +21,29 @@ export const E2E_USER_NO_HANDLE = {
 /** POST /api/entries 用。ハッシュだけが DB に入る */
 export const E2E_AGENT_TOKEN = "e2e-token-00000000000000000000000000";
 
+/**
+ * レート制限が既に埋まった状態を確かめるための専用ユーザーとトークン。
+ * `prepare-db.ts` が sustained の上限ぶんのエントリを**12時間前の作成時刻で**入れる。
+ *
+ * **`E2E_USER` と分けるのが要点。** レート制限はトークンではなくユーザー単位で
+ * 数えるので（lib/rate-limit.ts）、埋め草を E2E_USER に紐付けると本人が制限に掛かり、
+ * 投稿するテストが全部落ちる。
+ *
+ * 12時間前にするのは2つ理由がある。
+ *
+ * 1. burst（5分）の窓からは外れ、sustained（24時間）の窓にだけ入る。
+ *    ビルドに何分かかっても結果が変わらない
+ * 2. 固定データより古くなるので、タイムラインの先頭を埋め草が占領しない
+ */
+export const E2E_USER_RATE_LIMITED = {
+  id: "e2e-user-rate-limited",
+  name: "E2E 実行者（レート制限済み）",
+  email: "e2e-rate-limited@example.test",
+  handle: "e2elimited",
+} as const;
+
+export const E2E_RATE_LIMITED_TOKEN = "e2e-token-ratelimited-0000000000";
+
 export const E2E_ENTRIES = [
   {
     slug: "2026-01-05-aa01",

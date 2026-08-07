@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { test as setup } from "@playwright/test";
 import { testAuth } from "./auth-instance";
-import { E2E_USER, E2E_USER_NO_HANDLE } from "./fixture";
+import { E2E_USER, E2E_USER_NO_HANDLE, E2E_USER_RATE_LIMITED } from "./fixture";
 
 /**
  * ログイン済みの状態を1回だけ作り、ファイルに保存する。
@@ -43,4 +43,10 @@ setup("handle 設定済みのユーザーでログインする", async () => {
 
 setup("handle 未設定のユーザーでログインする", async () => {
   await saveStorageState(E2E_USER_NO_HANDLE.id, `${AUTH_DIR}/no-handle.json`);
+});
+
+// トークンの発行上限を確かめるための3人目。E2E_USER でやると、同じ人が使う
+// 「トークンを発行すると一度だけ平文が表示される」テストを巻き添えで落とす
+setup("レート制限済みのユーザーでログインする", async () => {
+  await saveStorageState(E2E_USER_RATE_LIMITED.id, `${AUTH_DIR}/rate-limited.json`);
 });

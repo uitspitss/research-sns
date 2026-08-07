@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { E2E_AGENT_TOKEN, E2E_USER } from "./fixture";
+import { E2E_AGENT_TOKEN, E2E_RATE_LIMITED_TOKEN, E2E_USER } from "./fixture";
 
 /**
  * 唯一の書き込み経路。Web に投稿フォームは無いので、ここが落ちると
@@ -54,4 +54,17 @@ test("title が無いと 400", async ({ request }) => {
   });
 
   expect(res.status()).toBe(400);
+});
+
+// レート制限は MCP だけでなくこちらにも効く（判定は lib/post-entry.ts に1本化してある）。
+// 上限に達した状態は prepare-db.ts が専用トークンで作る。ここでは投稿しないので retry しても結果が変わらない
+test("レート制限に達したトークンでは 429 と Retry-After が返る", async ({ request }) => {
+  const res = await request.post("/api/entries", {
+    headers: { Authorization: `Bearer ${E2E_RATE_LIMITED_TOKEN}` },
+    data: { title: "上限 → 超過", body: "- 通らないはず" },
+  });
+
+  expect(res.status()).toBe(429);
+  expect(Number(res.headers()["retry-after"])).toBeGreaterThan(0);
+  expect((await res.json()).error).toContain("レート制限");
 });

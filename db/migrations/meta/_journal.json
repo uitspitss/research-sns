@@ -8,6 +8,13 @@
       "when": 1785896194230,
       "tag": "0000_nervous_aqueduct",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786131826199,
+      "tag": "0001_sleepy_rumiko_fujikawa",
+      "breakpoints": true
     }
   ]
 }
