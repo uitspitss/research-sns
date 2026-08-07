@@ -1,0 +1,13 @@
+# wt step copy-ignored の対象。gitignore 済み かつ ここに載っているファイルだけがコピーされる。
+# 絞らないと node_modules/ や .next/ や e2e/.auth/ まで持ってくる。依存は ni が入れる。
+#
+# このファイルは **コピー元**（既定では main worktree）側が読まれる。新しい worktree に
+# 置いても効かないので、main にマージされるまでは絞り込みが働かない点に注意。
+.env.keys
+
+# ローカル専用の Claude Code 設定（許可済みコマンドなど）
+.claude/settings.local.json
+
+# better-auth のセッション Cookie。無くても E2E が作り直すが、初回実行が速くなる。
+# copy-ignored は既定で既存ファイルを飛ばすので、古い Cookie で上書きされることはない
+e2e/.auth/

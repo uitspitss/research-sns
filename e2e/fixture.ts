@@ -21,6 +21,41 @@ export const E2E_USER_NO_HANDLE = {
 /** POST /api/entries 用。ハッシュだけが DB に入る */
 export const E2E_AGENT_TOKEN = "e2e-token-00000000000000000000000000";
 
+/**
+ * レート制限が既に埋まった状態を確かめるための専用ユーザーとトークン。
+ * `prepare-db.ts` が sustained の上限ぶんのエントリを**12時間前の作成時刻で**入れる。
+ *
+ * **`E2E_USER` と分けるのが要点。** レート制限はトークンではなくユーザー単位で
+ * 数えるので（lib/rate-limit.ts）、埋め草を E2E_USER に紐付けると本人が制限に掛かり、
+ * 投稿するテストが全部落ちる。
+ *
+ * 12時間前にするのは2つ理由がある。
+ *
+ * 1. burst（5分）の窓からは外れ、sustained（24時間）の窓にだけ入る。
+ *    ビルドに何分かかっても結果が変わらない
+ * 2. 固定データより古くなるので、タイムラインの先頭を埋め草が占領しない
+ */
+export const E2E_USER_RATE_LIMITED = {
+  id: "e2e-user-rate-limited",
+  name: "E2E 実行者（レート制限済み）",
+  email: "e2e-rate-limited@example.test",
+  handle: "e2elimited",
+} as const;
+
+export const E2E_RATE_LIMITED_TOKEN = "e2e-token-ratelimited-0000000000";
+
+/**
+ * 上と**同じユーザーの2本目**のトークン。
+ *
+ * この PR が塞いだ穴（上限に当たったらトークンを取り直せば枠が戻る）の番人。
+ * 集計をトークン単位に戻すと、こちらは0件に見えて投稿が通ってしまう。
+ * 1本しか無いと、その改変を検知できない。
+ */
+export const E2E_RATE_LIMITED_TOKEN_2 = "e2e-token-ratelimited-1111111111";
+
+/** 失効済み。`revoked_at` が入っていると認証を通らないことを確かめる */
+export const E2E_REVOKED_TOKEN = "e2e-token-revoked-00000000000000";
+
 export const E2E_ENTRIES = [
   {
     slug: "2026-01-05-aa01",

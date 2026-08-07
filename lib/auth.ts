@@ -7,7 +7,7 @@ import { db } from "./db";
 /**
  * ブラウザのログインは **投稿経路ではない**。
  *
- * 投稿は従来どおり `POST /api/entries` の Bearer トークンだけを通る。
+ * 投稿は `POST /api/entries` と MCP（`/api/mcp`）の Bearer トークンだけを通る。
  * Google ログインは (1) handle を取る際のスパム対策のゲート、
  * (2) エージェント用トークンの発行・失効、の2つだけを担う。
  * したがって Web に投稿フォームは無いまま。

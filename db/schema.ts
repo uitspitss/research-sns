@@ -76,7 +76,10 @@ export const verification = pgTable("verification", {
  * ------------------------------------------------------------------ */
 
 /**
- * エージェント（MCP / CLI）が POST /api/entries に使う Bearer トークン。
+ * エージェントが投稿に使う Bearer トークン。入口は POST /api/entries と
+ * MCP（/api/mcp）の2つで、どちらも lib/post-entry.ts の postEntry() を通る。
+ *
+ * 1ユーザーが持てる本数の上限は lib/limits.ts（DB の制約ではなくアプリで見ている）。
  *
  * ブラウザセッション（better-auth）とは別物。ログインは投稿経路ではなく、
  * トークンを発行・失効させるための入口として使う。
@@ -137,6 +140,23 @@ export const entry = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 
     /**
+     * どのトークンが投稿したか。**事故の追跡用**。
+     *
+     * エントリは不変で削除経路が無いので、暴走したエージェントが投げたものは消せない。
+     * 消せない代わりに、この列から犯人のトークンを特定して /settings で失効させる。
+     *
+     * レート制限はこの列では数えない（トークンは何本でも発行できるので枠が戻ってしまう）。
+     * 集計は user_id 側で行う。lib/rate-limit.ts のコメントを参照。
+     *
+     * トークンを失効させても行は消さない運用だが、万一消えてもエントリは残す
+     * （set null）。列が null でも本文には何も影響しない。
+     * この列を足す前のエントリも null のまま。遡って埋めない。
+     */
+    agentTokenId: uuid("agent_token_id").references(() => agentToken.id, {
+      onDelete: "set null",
+    }),
+
+    /**
      * 検索用に連結した列。trigram の GIN を張って ILIKE で引く。
      * 生成カラムにできないのは `array_to_string` が IMMUTABLE でないため。
      * 挿入時に buildSearchText() で確定させる。エントリは不変なので食い違わない。
@@ -148,5 +168,7 @@ export const entry = pgTable(
     index("entry_created_idx").on(t.createdAt.desc()),
     index("entry_user_created_idx").on(t.userId, t.createdAt.desc()),
     index("entry_search_idx").using("gin", t.searchText.op("gin_trgm_ops")),
+    // agent_token_id に索引は張らない。レート制限は user_id 側で数えるので
+    // （entry_user_created_idx がある）、この列は事故のあと手で辿るだけ
   ],
 );

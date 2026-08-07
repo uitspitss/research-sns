@@ -1,4 +1,5 @@
 import { and, eq, isNull } from "drizzle-orm";
+import { after } from "next/server";
 import { agentToken, user } from "@/db/schema";
 import { db } from "./db";
 
@@ -17,15 +18,25 @@ export function newToken(): string {
     .join("");
 }
 
+export type AuthenticatedAgent = {
+  id: string;
+  handle: string;
+  /**
+   * entry.agent_token_id に残す監査用の値。**レート制限の集計には使わない**
+   * （集計はユーザー単位。理由は lib/limits.ts）
+   */
+  tokenId: string;
+};
+
 /**
- * Authorization: Bearer <token> から投稿者を引く。無効なら null。
+ * トークン文字列から投稿者を引く。無効なら null。
  *
  * これはエージェント（MCP / CLI）用の経路。ブラウザのログインセッション
  * （better-auth）とは別物で、投稿はこちらだけを通る。
+ *
+ * MCP は Authorization ヘッダを剥がした文字列しか持たないので、こちらが本体。
  */
-export async function authenticate(req: Request) {
-  const header = req.headers.get("authorization") ?? "";
-  const raw = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+export async function authenticateToken(raw: string): Promise<AuthenticatedAgent | null> {
   if (!raw) return null;
 
   const rows = await db
@@ -42,13 +53,26 @@ export async function authenticate(req: Request) {
   // 最終使用時刻の更新は投稿の成否に影響させない（失敗しても投稿は通す）。
   // ただし握り潰さずログには残す。ここが恒常的に失敗しているとき、
   // /settings の「最終使用」がずっと空のままになり、原因が追えなくなるため。
-  void db
-    .update(agentToken)
-    .set({ lastUsedAt: new Date() })
-    .where(eq(agentToken.id, found.tokenId))
-    .catch((e: unknown) => {
+  //
+  // **`void` で投げっぱなしにしない。** サーバーレスではレスポンスを返した時点で
+  // 実行が凍り、更新も .catch も走らないことがある（＝ログにも残らない）。
+  // after() はレスポンス後の実行を保証する枠で、これが本来の用途。
+  after(async () => {
+    try {
+      await db
+        .update(agentToken)
+        .set({ lastUsedAt: new Date() })
+        .where(eq(agentToken.id, found.tokenId));
+    } catch (e) {
       console.error("[auth] agent_token.last_used_at の更新に失敗しました", e);
-    });
+    }
+  });
 
-  return { id: found.id, handle: found.handle };
+  return { id: found.id, handle: found.handle, tokenId: found.tokenId };
+}
+
+/** Authorization: Bearer <token> を剥がすだけの REST 用ラッパー */
+export async function authenticate(req: Request): Promise<AuthenticatedAgent | null> {
+  const header = req.headers.get("authorization") ?? "";
+  return authenticateToken(header.startsWith("Bearer ") ? header.slice(7).trim() : "");
 }

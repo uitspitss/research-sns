@@ -12,7 +12,7 @@ export type SearchableEntry = {
  * この列は trigram の GIN インデックス + ILIKE で検索するためのもの。
  * 生成カラムにできない理由は db/schema.ts のコメントを参照。
  *
- * 挿入経路（POST /api/entries と db/seed.ts）は必ずこの関数を通すこと。
+ * 挿入経路（lib/post-entry.ts / db/seed.ts / e2e/prepare-db.ts）は必ずこの関数を通すこと。
  * 直接文字列を組み立てると、検索対象から漏れる項目が出る。
  */
 export function buildSearchText(entry: SearchableEntry): string {

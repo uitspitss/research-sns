@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/db-error";
 import { validateHandle } from "@/lib/handle";
+import { MAX_ACTIVE_TOKENS } from "@/lib/limits";
 import { hashToken, newToken } from "@/lib/token";
 
 /**
@@ -81,6 +82,18 @@ export async function issueToken(_prev: ActionState, form: FormData): Promise<Ac
   const label = String(form.get("label") ?? "").trim();
   if (!label) return { error: "ラベルを入れてください（どの端末用かの見分けに使います）" };
   if (label.length > 100) return { error: "ラベルが長すぎます" };
+
+  // 上限まで引ければ十分。全部数える必要はない
+  const active = await db
+    .select({ id: agentToken.id })
+    .from(agentToken)
+    .where(and(eq(agentToken.userId, me.id), isNull(agentToken.revokedAt)))
+    .limit(MAX_ACTIVE_TOKENS);
+  if (active.length >= MAX_ACTIVE_TOKENS) {
+    return {
+      error: `有効なトークンが上限（${MAX_ACTIVE_TOKENS}本）です。使っていないものを失効させてください`,
+    };
+  }
 
   const token = newToken();
   await db.insert(agentToken).values({

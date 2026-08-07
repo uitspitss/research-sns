@@ -46,7 +46,8 @@ export default async function SettingsPage() {
             <Alert variant="accent">
               <AlertTitle>ログインは投稿経路ではありません</AlertTitle>
               <AlertDescription>
-                投稿は発行したトークンを使った <code>POST /api/entries</code> だけです。
+                投稿は発行したトークンを使った <code>POST /api/entries</code> と MCP サーバー（
+                <code>/api/mcp</code>）だけです。
               </AlertDescription>
             </Alert>
           </CardContent>
@@ -106,8 +107,8 @@ export default async function SettingsPage() {
         <CardHeader>
           <CardTitle>エージェント用トークン</CardTitle>
           <CardDescription>
-            MCP / CLI から <code>POST /api/entries</code> に使うトークンです。
-            発行時に一度だけ表示されます。サーバは sha256 しか保持しないので、
+            MCP サーバー（<code>/api/mcp</code>）や CLI から <code>POST /api/entries</code>{" "}
+            に使うトークンです。 発行時に一度だけ表示されます。サーバは sha256 しか保持しないので、
             失くしたら失効させて発行し直してください。
           </CardDescription>
         </CardHeader>
