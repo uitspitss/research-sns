@@ -1,9 +1,15 @@
-[pre-start]
+# pre-start は [[...]] のパイプライン形式で書く。table 形式（[pre-start]）は将来
+# 「1ブロック内は並列」に変わるので、直列に走らせたいものは1ブロック1つに分ける
+
 # これがないと worktree で mise.toml が信頼されず、ピンしたバージョンが使われない
+[[pre-start]]
 trust = "mise trust"
+
+[[pre-start]]
 install = "ni"
 
 # 暗号化された .env は git 管理下なので worktree に付いてくるが、復号キーの .env.keys は
 # gitignore 済みなので付いてこない。無いと dotenvx が DECRYPTION_FAILED で落ちる。
 # コピー対象は .worktreeinclude で絞ってある
+[[pre-start]]
 copy-keys = "wt step copy-ignored"
