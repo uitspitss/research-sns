@@ -41,8 +41,8 @@ await admin.end();
 const db = drizzle(E2E_DATABASE_URL);
 
 // 拡張は drizzle-kit が migration に含められない。db/init/01-extensions.sql と同じ内容を
-// **この**データベースに対して作る（拡張はデータベース単位）
-await db.execute(sql`create extension if not exists pgcrypto`);
+// **この**データベースに対して作る（拡張はデータベース単位）。
+// migrate より先に必要（0000 の entry_search_idx が gin_trgm_ops を使う）
 await db.execute(sql`create extension if not exists pg_trgm`);
 
 await migrate(db, { migrationsFolder: "./db/migrations" });
