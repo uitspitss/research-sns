@@ -3,4 +3,7 @@
 trust = "mise trust"
 install = "ni"
 
-# copy-ignored は不要。.env は暗号化されて git 管理下にあるので worktree に付いてくる
+# 暗号化された .env は git 管理下なので worktree に付いてくるが、復号キーの .env.keys は
+# gitignore 済みなので付いてこない。無いと dotenvx が DECRYPTION_FAILED で落ちる。
+# コピー対象は .worktreeinclude で絞ってある
+copy-keys = "wt step copy-ignored"
