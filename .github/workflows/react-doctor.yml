@@ -6,12 +6,18 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  # commit-status input の既定が true。無いと publish が warning を出してスキップされる
+  statuses: write
 
 jobs:
   react-doctor:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: millionco/react-doctor@main
         with:
-          fail-on: none
+          # react-doctor は既定の scope: changed で base と比較する。action 側も
+          # base SHA を depth 1 で fetch するが、届かないと「変更ファイル内の全指摘」に
+          # 劣化して警告が出る。履歴が浅いリポジトリなので full clone のコストは無視できる
+          fetch-depth: 0
+      - uses: millionco/react-doctor@v2
+        continue-on-error: true
