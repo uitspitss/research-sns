@@ -2,6 +2,7 @@ import { queryEntryDetails } from "@/lib/entries";
 import { postEntryInputSchema } from "@/lib/entry-input";
 import { describePostEntryError, postEntry } from "@/lib/post-entry";
 import { authenticate } from "@/lib/token";
+import { parseEntriesQuery } from "./schema";
 
 /**
  * POST /api/entries
@@ -42,14 +43,12 @@ export async function POST(req: Request) {
 
 /** GET /api/entries?handle=&q=&limit=  公開エントリの読み出し。認証不要。 */
 export async function GET(req: Request) {
-  const p = new URL(req.url).searchParams;
+  const parsed = parseEntriesQuery(new URL(req.url).searchParams);
+  if (!parsed.success) {
+    return json({ error: parsed.error.issues[0]?.message ?? "クエリが不正です" }, 400);
+  }
 
-  const rows = await queryEntryDetails({
-    handle: p.get("handle") ?? undefined,
-    q: p.get("q") ?? undefined,
-    // 下限も要る。負数を渡すと Postgres が「LIMIT must not be negative」で落ちて 500 になる
-    limit: Math.max(1, Math.min(Number(p.get("limit")) || 20, 100)),
-  });
+  const rows = await queryEntryDetails(parsed.data);
 
   // 列名は API の契約なので snake_case のまま返す（DB 側は loggedOn）
   const entries = rows.map(({ loggedOn, ...rest }) => ({ ...rest, logged_on: loggedOn }));

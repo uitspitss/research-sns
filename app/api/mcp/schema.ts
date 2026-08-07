@@ -5,7 +5,8 @@ import {
   type PostEntryDraft,
   entryFields,
 } from "@/lib/entry-input";
-import { ENTRY_LIMITS } from "@/lib/limits";
+import { HANDLE_PATTERN, HANDLE_RULE } from "@/lib/handle";
+import { ENTRY_LIMITS, QUERY_LIMITS } from "@/lib/limits";
 
 /**
  * MCP のツールが受け取る入力の形。**エージェントに配る契約**なので、
@@ -69,7 +70,13 @@ export const searchEntriesInputSchema = z.strictObject({
     .optional()
     .describe("検索語。経路の途中のノード名でも引ける（端点をひとつ思い出せれば足りる）。"),
   handle: handleField().optional().describe("投稿者で絞る。省略すると全員が対象。"),
-  limit: z.number().int().min(1).max(50).default(20).describe("返す件数の上限。"),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(QUERY_LIMITS.mcp.max)
+    .default(QUERY_LIMITS.mcp.fallback)
+    .describe("返す件数の上限。"),
 });
 
 export const getEntryInputSchema = z.strictObject({
@@ -82,11 +89,10 @@ export const getEntryInputSchema = z.strictObject({
     .describe("エントリの slug。検索結果か公開URLからそのまま渡す。形を自分で組み立てないこと。"),
 });
 
-/** lib/handle.ts の PATTERN と同じ。あちらは値の検証で、こちらは配る契約 */
 function handleField() {
   return z
     .string()
-    .regex(/^[a-z0-9_]{2,20}$/, "handle は英小文字・数字・アンダースコアの2〜20文字です")
+    .regex(HANDLE_PATTERN, `handle は${HANDLE_RULE}です`)
     .describe("投稿者の handle。検索結果か公開URL（/e/{handle}/{slug}）から取る。");
 }
 

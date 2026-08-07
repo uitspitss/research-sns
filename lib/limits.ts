@@ -33,6 +33,15 @@ export const ENTRY_LIMITS = {
  */
 export const MAX_ACTIVE_TOKENS = 20;
 
+/**
+ * 一覧で返す件数。REST と MCP で上限が違うのは、MCP がテキスト整形も一緒に返すぶん
+ * 1件あたりが重く、エージェントのコンテキストを食うため。
+ */
+export const QUERY_LIMITS = {
+  rest: { fallback: 20, max: 100 },
+  mcp: { fallback: 20, max: 50 },
+} as const;
+
 export type RateLimitScope = "burst" | "sustained";
 
 /**
