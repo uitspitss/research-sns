@@ -102,7 +102,9 @@ function handleField() {
 
 /** 一覧の1件。単体では配らない（詳細と検索結果の土台） */
 const entrySummarySchema = z.object({
-  handle: z.string().nullable(),
+  // nullable にしない。到達しない null を契約としてエージェントに配ることになる
+  // （エントリの著者には必ず handle がある。理由は lib/entries.ts の authorHandle）
+  handle: z.string(),
   slug: z.string(),
   title: z.string(),
   trigger: z.string().nullable(),

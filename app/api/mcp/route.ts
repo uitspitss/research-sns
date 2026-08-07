@@ -38,7 +38,7 @@ function siteOrigin(): string {
   return url.replace(/\/$/, "");
 }
 
-const entryUrl = (handle: string | null, slug: string) => `${siteOrigin()}/e/${handle}/${slug}`;
+const entryUrl = (handle: string, slug: string) => `${siteOrigin()}/e/${handle}/${slug}`;
 
 const toSummary = (e: EntrySummary): EntrySummaryOut => ({
   handle: e.handle,

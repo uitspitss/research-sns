@@ -106,6 +106,17 @@ describe("postEntryInputSchema（REST の入口。既存の寛容な挙動を保
     expect(url(ENTRY_LIMITS.sourceUrl).success).toBe(false);
     expect(url(10).success).toBe(true);
   });
+
+  // 長さの検査を先に置くと、落とすはずのものでエラーになって挙動が食い違う
+  it("http(s) 以外は長くても落とすだけ（長さは残るものにしか効かない）", () => {
+    const parsed = postEntryInputSchema.safeParse({
+      ...minimal,
+      sources: [`ftp://example.com/${"a".repeat(3000)}`, "https://example.com/a"],
+    });
+
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.sources).toEqual(["https://example.com/a"]);
+  });
 });
 
 describe("resolveLoggedOn", () => {

@@ -97,10 +97,18 @@ export const postEntryInputSchema = z.object({
     .array(z.string().trim().max(ENTRY_LIMITS.pathNode, "path の要素が長すぎます"))
     .default([])
     .transform((v) => v.filter((s) => s !== "").slice(0, ENTRY_LIMITS.path)),
+  // **長さは残るものだけに効かせる。** 要素の max を先に置くと、本来は黙って落とすはずの
+  // http(s) 以外の長い文字列で 400 になり、「落として続行する」という意図と食い違う
   sources: z
-    .array(z.string().trim().max(ENTRY_LIMITS.sourceUrl, "sources の URL が長すぎます"))
+    .array(z.string())
     .default([])
-    .transform((v) => v.filter((s) => /^https?:\/\//.test(s)).slice(0, ENTRY_LIMITS.sources)),
+    .transform((v) =>
+      v
+        .map((s) => s.trim())
+        .filter((s) => /^https?:\/\//.test(s))
+        .slice(0, ENTRY_LIMITS.sources),
+    )
+    .pipe(z.array(z.string().max(ENTRY_LIMITS.sourceUrl, "sources の URL が長すぎます"))),
 });
 
 /** 検証済みの入力。REST・MCP どちらのスキーマもこの形に落ちる */

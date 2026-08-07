@@ -1,11 +1,24 @@
-import { and, desc, eq, ilike } from "drizzle-orm";
+import { and, desc, eq, ilike, isNotNull, sql } from "drizzle-orm";
 import { entry, user } from "@/db/schema";
 import { db } from "./db";
+
+/**
+ * 投稿には handle が要る（lib/token.ts が handle 未設定を弾く）ので、エントリの著者に
+ * handle が無いことはない。`user.handle` の型は nullable だが、ここで string に寄せる。
+ *
+ * 寄せないと `/e/null/{slug}` を組み立てる経路が表現でき、到達しない nullable が
+ * MCP の出力スキーマとしてエージェントにまで配られる。
+ * **クエリ側も必ず handleOwned で絞ること**（下の関数はすべて絞ってある）。
+ */
+const authorHandle = sql<string>`${user.handle}`;
+
+/** 上の型の言い分を実際に真にする条件 */
+const handleOwned = isNotNull(user.handle);
 
 /** 一覧に出す分だけ。本文は引かない（タイムラインで無駄に重くなるため） */
 const listColumns = {
   slug: entry.slug,
-  handle: user.handle,
+  handle: authorHandle,
   title: entry.title,
   trigger: entry.trigger,
   path: entry.path,
@@ -21,7 +34,8 @@ const detailColumns = {
 
 export type EntrySummary = {
   slug: string;
-  handle: string | null;
+  /** null にならない。理由は authorHandle のコメント */
+  handle: string;
   title: string;
   trigger: string | null;
   path: string[];
@@ -40,6 +54,7 @@ export function listRecentEntries(limit = 40): Promise<EntrySummary[]> {
     .select(listColumns)
     .from(entry)
     .innerJoin(user, eq(user.id, entry.userId))
+    .where(handleOwned)
     .orderBy(desc(entry.createdAt))
     .limit(limit);
 }
@@ -49,7 +64,7 @@ export function listEntriesByHandle(handle: string, limit = 100): Promise<EntryS
     .select(listColumns)
     .from(entry)
     .innerJoin(user, eq(user.id, entry.userId))
-    .where(eq(user.handle, handle))
+    .where(and(handleOwned, eq(user.handle, handle)))
     .orderBy(desc(entry.createdAt))
     .limit(limit);
 }
@@ -63,7 +78,7 @@ export function searchEntries(query: string, limit = 50): Promise<EntrySummary[]
     .select(listColumns)
     .from(entry)
     .innerJoin(user, eq(user.id, entry.userId))
-    .where(ilike(entry.searchText, `%${query}%`))
+    .where(and(handleOwned, ilike(entry.searchText, `%${query}%`)))
     .orderBy(desc(entry.createdAt))
     .limit(limit);
 }
@@ -78,6 +93,7 @@ export type EntryQuery = { handle?: string | undefined; q?: string | undefined; 
 
 const entryFilters = ({ handle, q }: EntryQuery) =>
   [
+    handleOwned,
     handle ? eq(user.handle, handle) : undefined,
     q ? ilike(entry.searchText, `%${q}%`) : undefined,
   ].filter((f) => f !== undefined);
@@ -113,7 +129,7 @@ export async function findEntry(handle: string, slug: string): Promise<EntryDeta
     .select(detailColumns)
     .from(entry)
     .innerJoin(user, eq(user.id, entry.userId))
-    .where(and(eq(user.handle, handle), eq(entry.slug, slug)))
+    .where(and(handleOwned, eq(user.handle, handle), eq(entry.slug, slug)))
     .limit(1);
 
   return rows[0];
