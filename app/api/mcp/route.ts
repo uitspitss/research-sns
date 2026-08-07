@@ -100,6 +100,16 @@ const ok = (text: string, structuredContent: Record<string, unknown>) => ({
 
 const fail = (text: string) => ({ isError: true, content: [{ type: "text" as const, text }] });
 
+/**
+ * **SDK はツールハンドラの例外を全部飲んで、error.message だけをエージェントに返す。**
+ * ログは一行も出ないので、ここで出さないと接続断も設定ミスもサーバー側に何も残らない。
+ * エージェントには内部の文言を見せず、再試行を促しすぎない文面を返す。
+ */
+function toolFailed(name: string, error: unknown) {
+  console.error(`[mcp] ${name} が失敗しました`, error);
+  return fail("サーバー側でエラーが起きました。同じ内容をすぐに投げ直さず、時間をおいてください。");
+}
+
 const handler = createMcpHandler(
   (server) => {
     server.registerTool(
@@ -123,21 +133,25 @@ const handler = createMcpHandler(
         },
       },
       async ({ query, handle, limit }) => {
-        const rows = (await queryEntries({ handle, q: query, limit })).map(toSummary);
+        try {
+          const rows = (await queryEntries({ handle, q: query, limit })).map(toSummary);
 
-        if (rows.length === 0) {
-          const what = query ? `「${query}」` : "指定の条件";
-          return ok(
-            `${what}に一致するエントリはありません。語を短くするか、経路の途中のノード名で引き直してください。`,
-            { entries: [], count: 0 },
+          if (rows.length === 0) {
+            const what = query ? `「${query}」` : "指定の条件";
+            return ok(
+              `${what}に一致するエントリはありません。語を短くするか、経路の途中のノード名で引き直してください。`,
+              { entries: [], count: 0 },
+            );
+          }
+
+          const text = clamp(
+            [`${rows.length} 件見つかりました。`, ...rows.map(formatSummary)].join("\n\n"),
+            "limit を下げるか query で絞り込んでください",
           );
+          return ok(text, { entries: rows, count: rows.length });
+        } catch (e) {
+          return toolFailed(`${PREFIX}_search_entries`, e);
         }
-
-        const text = clamp(
-          [`${rows.length} 件見つかりました。`, ...rows.map(formatSummary)].join("\n\n"),
-          "limit を下げるか query で絞り込んでください",
-        );
-        return ok(text, { entries: rows, count: rows.length });
       },
     );
 
@@ -159,15 +173,19 @@ const handler = createMcpHandler(
         },
       },
       async ({ handle, slug }) => {
-        const found = await findEntry(handle, slug);
-        if (!found) {
-          return fail(
-            `@${handle} の ${slug} は見つかりません。つづりを確認するか、${PREFIX}_search_entries で探し直してください。`,
-          );
-        }
+        try {
+          const found = await findEntry(handle, slug);
+          if (!found) {
+            return fail(
+              `@${handle} の ${slug} は見つかりません。つづりを確認するか、${PREFIX}_search_entries で探し直してください。`,
+            );
+          }
 
-        const detail = toDetail(found);
-        return ok(clamp(formatDetail(detail), "本文は url を開いて読んでください"), detail);
+          const detail = toDetail(found);
+          return ok(clamp(formatDetail(detail), "本文は url を開いて読んでください"), detail);
+        } catch (e) {
+          return toolFailed(`${PREFIX}_get_entry`, e);
+        }
       },
     );
 
@@ -197,7 +215,7 @@ const handler = createMcpHandler(
         },
       },
       async (draft, ctx) => {
-        const agent = ctx.http?.authInfo?.extra?.agent as AuthenticatedAgent | undefined;
+        const agent = agentFrom(ctx.http?.authInfo?.extra);
         if (!agent) {
           return fail(
             "投稿にはトークンが要ります。/settings で発行して、MCP クライアントの Authorization ヘッダに " +
@@ -205,16 +223,20 @@ const handler = createMcpHandler(
           );
         }
 
-        const result = await postEntry(draft, agent, siteOrigin());
-        if (!result.ok) return fail(describePostEntryError(result.error));
+        try {
+          const result = await postEntry(draft, agent, siteOrigin());
+          if (!result.ok) return fail(describePostEntryError(result.error));
 
-        const output = {
-          url: result.url,
-          handle: result.handle,
-          slug: result.slug,
-          logged_on: result.loggedOn,
-        };
-        return ok(`投稿しました。\n${result.url}`, output);
+          const output = {
+            url: result.url,
+            handle: result.handle,
+            slug: result.slug,
+            logged_on: result.loggedOn,
+          };
+          return ok(`投稿しました。\n${result.url}`, output);
+        } catch (e) {
+          return toolFailed(`${PREFIX}_post_entry`, e);
+        }
       },
     );
   },
@@ -234,6 +256,21 @@ async function verifyToken(_req: Request, bearerToken?: string): Promise<AuthInf
   if (!agent) throw new Error("invalid agent token");
 
   return { token: bearerToken, clientId: agent.id, scopes: [], extra: { agent } };
+}
+
+/**
+ * `AuthInfo.extra` は `Record<string, unknown>` なので、素で書くと無検査キャストになる。
+ * 詰める側（verifyToken）と読む側がずれても型検査は通ってしまうため、
+ * 取り出しをここ1箇所に閉じて形を確かめる。ずれたら「トークンが要ります」に落ちる。
+ */
+function agentFrom(extra: Record<string, unknown> | undefined): AuthenticatedAgent | undefined {
+  const found = extra?.agent;
+  if (!found || typeof found !== "object") return undefined;
+
+  const { id, handle, tokenId } = found as Partial<AuthenticatedAgent>;
+  return typeof id === "string" && typeof handle === "string" && typeof tokenId === "string"
+    ? { id, handle, tokenId }
+    : undefined;
 }
 
 const authHandler = withMcpAuth(handler, verifyToken, { required: false });

@@ -6,8 +6,6 @@ describe("describePostEntryError", () => {
     const message = describePostEntryError({
       code: "rate_limited",
       scope: "burst",
-      limit: 5,
-      windowMs: 5 * 60_000,
       retryAfterSeconds: 240,
     });
 

@@ -47,7 +47,8 @@ export async function GET(req: Request) {
   const rows = await queryEntryDetails({
     handle: p.get("handle") ?? undefined,
     q: p.get("q") ?? undefined,
-    limit: Math.min(Number(p.get("limit")) || 20, 100),
+    // 下限も要る。負数を渡すと Postgres が「LIMIT must not be negative」で落ちて 500 になる
+    limit: Math.max(1, Math.min(Number(p.get("limit")) || 20, 100)),
   });
 
   // 列名は API の契約なので snake_case のまま返す（DB 側は loggedOn）

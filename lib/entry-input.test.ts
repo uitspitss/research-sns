@@ -75,6 +75,20 @@ describe("postEntryInputSchema（REST の入口。既存の寛容な挙動を保
     expect(postEntryInputSchema.safeParse({ ...minimal, logged_on: "今日" }).success).toBe(false);
   });
 
+  // 形式だけ見ていると、実在しない日付が date 列まで届いて Postgres の 22008 になる。
+  // それは unique 違反ではないので insertWithUniqueSlug が投げ直し、400 で返すべきものが
+  // 500 に化ける。**入る前に弾く**
+  it("logged_on は実在する日付だけを受ける", () => {
+    const at = (d: string) => postEntryInputSchema.safeParse({ ...minimal, logged_on: d }).success;
+
+    expect(at("2026-02-31")).toBe(false);
+    expect(at("2026-13-45")).toBe(false);
+    expect(at("0000-00-00")).toBe(false);
+    // うるう年は通す / 通さない
+    expect(at("2024-02-29")).toBe(true);
+    expect(at("2026-02-29")).toBe(false);
+  });
+
   it("path / sources が配列でなければ弾く（旧実装は黙って空配列にしていた）", () => {
     expect(postEntryInputSchema.safeParse({ ...minimal, path: "麦茶" }).success).toBe(false);
     expect(postEntryInputSchema.safeParse({ ...minimal, sources: 1 }).success).toBe(false);

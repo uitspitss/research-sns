@@ -9,13 +9,9 @@ import { insertWithUniqueSlug, newSlug } from "./slug";
 import type { AuthenticatedAgent } from "./token";
 
 export type PostEntryError =
-  | {
-      code: "rate_limited";
-      scope: RateLimitScope;
-      limit: number;
-      windowMs: number;
-      retryAfterSeconds: number;
-    }
+  // limit / windowMs は持たない。scope から一意に決まる（POST_RATE_LIMITS）ので、
+  // 別フィールドで持つと食い違った状態が表現できてしまう
+  | { code: "rate_limited"; scope: RateLimitScope; retryAfterSeconds: number }
   | { code: "slug_exhausted" };
 
 export type PostEntryResult =
@@ -39,16 +35,14 @@ export async function postEntry(
   origin: string,
 ): Promise<PostEntryResult> {
   // トークンではなくユーザーで数える（理由は lib/limits.ts のコメント）
-  const limit = await checkPostRateLimit(agent.id);
-  if (!limit.allowed) {
+  const verdict = await checkPostRateLimit(agent);
+  if (!verdict.allowed) {
     return {
       ok: false,
       error: {
         code: "rate_limited",
-        scope: limit.scope,
-        limit: limit.limit,
-        windowMs: limit.windowMs,
-        retryAfterSeconds: limit.retryAfterSeconds,
+        scope: verdict.scope,
+        retryAfterSeconds: verdict.retryAfterSeconds,
       },
     };
   }
@@ -78,7 +72,13 @@ export async function postEntry(
     (e) => isUniqueViolation(e, "entry_user_slug_key"),
   );
 
-  if (!slug) return { ok: false, error: { code: "slug_exhausted" } };
+  if (!slug) {
+    // ここに来るのは「同じユーザーが同じ日に4桁hex を5回連続で衝突させた」場合で、
+    // 素直に考えるとバグの兆候（乱数が壊れている等）。文面は再試行を促すので、
+    // 残さないと運用側に永久に届かない
+    console.error("[post-entry] slug を作れませんでした", { userId: agent.id, loggedOn });
+    return { ok: false, error: { code: "slug_exhausted" } };
+  }
 
   return {
     ok: true,

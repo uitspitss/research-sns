@@ -44,6 +44,18 @@ export const E2E_USER_RATE_LIMITED = {
 
 export const E2E_RATE_LIMITED_TOKEN = "e2e-token-ratelimited-0000000000";
 
+/**
+ * 上と**同じユーザーの2本目**のトークン。
+ *
+ * この PR が塞いだ穴（上限に当たったらトークンを取り直せば枠が戻る）の番人。
+ * 集計をトークン単位に戻すと、こちらは0件に見えて投稿が通ってしまう。
+ * 1本しか無いと、その改変を検知できない。
+ */
+export const E2E_RATE_LIMITED_TOKEN_2 = "e2e-token-ratelimited-1111111111";
+
+/** 失効済み。`revoked_at` が入っていると認証を通らないことを確かめる */
+export const E2E_REVOKED_TOKEN = "e2e-token-revoked-00000000000000";
+
 export const E2E_ENTRIES = [
   {
     slug: "2026-01-05-aa01",

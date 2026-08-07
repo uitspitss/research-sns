@@ -22,11 +22,15 @@ Next.js 16 (App Router) + Postgres + Drizzle ORM。Vite ではないので、Vit
 | `lib/limits.ts` | 上限値だけ。**何も import しない** |
 | `lib/entry-input.ts` | 共通フィールドと REST 用スキーマ。DB を掴まない |
 | `app/api/mcp/schema.ts` | MCP 用スキーマ。エージェントに配る契約なので MCP の隣に置く |
-| `lib/post-entry.ts` | 保存。ここだけが DB を掴む |
+| `lib/slug.ts` | slug の生成と衝突時の入れ直し。DB を掴まない |
+| `lib/post-entry.ts` | 保存。ここで DB に書く |
 
 - **上限値を書き写さない。** 決めているのは `lib/limits.ts` だけ
-- MCP は REST より3点だけ厳しい（`path` 必須 / `sources` を落とさず弾く / 知らないキーを弾く）。
-  理由は `app/api/mcp/schema.ts` 冒頭のコメントを参照
+- **MCP は「黙って直さない・捨てない」。** REST が切り詰め・除去で済ませるところを
+  一律エラーにする。理由は `app/api/mcp/schema.ts` 冒頭のコメントを参照
+- **スキーマにフィールドを足したら `PostEntryDraft` にも足す。** 忘れると
+  `lib/entry-input.ts` の `Exactly` が型エラーで止める（値だけでなくキー集合も見ている。
+  任意プロパティは代入可能性を壊さないため）
 - **レート制限はユーザー単位で数える。トークン単位にしない。**
   トークンは何本でも発行できるので、トークンで数えると発行し直すだけで枠が戻る
 - `entry.agent_token_id` は投稿元のトークン。集計には使わない、事故の追跡用。
@@ -96,9 +100,11 @@ gitignore された生成物で、クリーンな環境には存在しないた�
   v2 で deprecated。**`@modelcontextprotocol/sdk`（v1 系の旧パッケージ）は使わない**
 - ツール名は `research_sns_` 始まり。他の MCP サーバーと同居したとき `get_entry` のような
   名前は衝突する
-- **ツールハンドラの `ctx` に元の `Request` は入っていない**（`ctx.http` は `authInfo` だけ）。
-  投稿 URL の origin は `BETTER_AUTH_URL` から取る。未設定なら throw する
-  （壊れた URL が不変のエントリとして残るため）
+- 投稿 URL の origin は `BETTER_AUTH_URL` から取る。未設定なら throw する
+  （壊れた URL が不変のエントリとして残るため）。`ctx.http?.req` から元の Request も
+  取れるが、**プロキシ配下では `req.url` の origin が公開 URL と食い違う**ので使わない
+- **ツールハンドラの例外は SDK が全部飲んで `message` だけをエージェントに返す。**
+  ログは一行も出ない。DB を触るハンドラは必ず try/catch して `toolFailed()` を通すこと
 - 認証は `withMcpAuth(..., { required: false })`。読み取り2つは無認証で通す。
   `verifyToken` は**トークンが無ければ `undefined`、あるのに引けなければ throw**。
   ここを取り違えると、綴りを間違えた人に「トークンがありません」と言うことになる

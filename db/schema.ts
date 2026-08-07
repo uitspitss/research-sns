@@ -76,7 +76,8 @@ export const verification = pgTable("verification", {
  * ------------------------------------------------------------------ */
 
 /**
- * エージェント（MCP / CLI）が POST /api/entries に使う Bearer トークン。
+ * エージェントが投稿に使う Bearer トークン。入口は POST /api/entries と
+ * MCP（/api/mcp）の2つで、どちらも lib/post-entry.ts の postEntry() を通る。
  *
  * 1ユーザーが持てる本数の上限は lib/limits.ts（DB の制約ではなくアプリで見ている）。
  *

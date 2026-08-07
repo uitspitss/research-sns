@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { entry } from "@/db/schema";
 import { db } from "./db";
 import { POST_RATE_LIMITS, type RateLimitScope } from "./limits";
+import type { AuthenticatedAgent } from "./token";
 
 /**
  * ある窓の「上限番目に新しい投稿」の時刻。まだ上限に達していなければ null。
@@ -53,7 +54,12 @@ export function rateLimitVerdict(states: RateLimitWindowState[], now: Date): Rat
  * 同時リクエストが両方とも窓をすり抜けることはありうる。数件のオーバーシュートに
  * 実害は無いので、行ロックは取らない。
  */
-export async function checkPostRateLimit(userId: string): Promise<RateLimitDecision> {
+export async function checkPostRateLimit(
+  // 文字列ではなく `{ id }` を取る。**tokenId を渡す事故を型で止めるため。**
+  // 取り違えても両方 string なので、通ってしまうと 0 件が返って制限が黙って無効になる
+  agent: Pick<AuthenticatedAgent, "id">,
+): Promise<RateLimitDecision> {
+  const userId = agent.id;
   const scopes = Object.keys(POST_RATE_LIMITS) as RateLimitScope[];
 
   const states = await Promise.all(

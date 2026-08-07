@@ -62,9 +62,11 @@ export const entryFields = {
         "例: '「軟水がおいしい」は近代の言説で、江戸期は水そのものが商品だった'",
     ),
 
-  logged_on: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "logged_on は YYYY-MM-DD 形式にしてください")
+  // **形式だけの正規表現にしないこと。** 2026-02-31 のような実在しない日付が date 列まで
+  // 届いて Postgres の 22008 になる。それは unique 違反ではないので insertWithUniqueSlug が
+  // 投げ直し、400 で返すべきものが 500（MCP では生のドライバ文言）に化ける
+  logged_on: z.iso
+    .date({ error: "logged_on は実在する日付を YYYY-MM-DD 形式で指定してください" })
     .optional()
     .describe(
       "調べた日（YYYY-MM-DD）。省略すると実行日。過去の分を後から記録するときだけ指定する。",
@@ -81,9 +83,13 @@ export const ENTRY_FIELD_DESCRIPTIONS = {
 } as const;
 
 /**
- * REST（POST /api/entries）の入口。壊れた要素は落として続行する（従来の挙動）。
+ * REST（POST /api/entries）の入口。
  *
- * MCP 側はこれより厳しい。違いと理由は app/api/mcp/schema.ts を参照。
+ * 空要素と http(s) 以外は落として続行し、件数超過は切り詰める（従来の挙動を維持）。
+ * ただし**長すぎる要素と型の合わない値はエラー**にする。従来は黙って詰めたり
+ * 捨てたりしていたが、エントリは不変なので後から直せない。
+ *
+ * MCP 側はさらに厳しい。違いと理由は app/api/mcp/schema.ts を参照。
  */
 export const postEntryInputSchema = z.object({
   ...entryFields,
@@ -107,6 +113,31 @@ export type PostEntryDraft = {
   sources: string[];
   logged_on?: string | undefined;
 };
+
+/**
+ * A と B が過不足なく一致していれば true、ずれれば never。
+ *
+ * **スキーマにフィールドを足したときの番人。** 代入可能性だけを見ていると、
+ * 足したフィールドは素通りする（変数からの代入には余剰プロパティ検査が効かない）。
+ * するとエージェントにはツールの入力スキーマとして配られ、zod も通すのに、
+ * postEntry() が PostEntryDraft に無い値を黙って捨てる。
+ * **エントリは不変なので、捨てられた値は取り返せない。**
+ *
+ * キー集合も比べているのは、**任意プロパティを足しても代入可能性は壊れない**ため。
+ * 値の互換性だけを見ると `note?: string` の追加を取り逃がす（実測で確認済み）。
+ */
+export type Exactly<A, B> = [keyof A] extends [keyof B]
+  ? [keyof B] extends [keyof A]
+    ? [A] extends [B]
+      ? [B] extends [A]
+        ? true
+        : never
+      : never
+    : never
+  : never;
+
+const restMatchesDraft: Exactly<z.infer<typeof postEntryInputSchema>, PostEntryDraft> = true;
+void restMatchesDraft;
 
 export function resolveLoggedOn(loggedOn: string | undefined, now: Date): string {
   return loggedOn ?? now.toISOString().slice(0, 10);

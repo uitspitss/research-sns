@@ -27,6 +27,8 @@ import {
   E2E_AGENT_TOKEN,
   E2E_ENTRIES,
   E2E_RATE_LIMITED_TOKEN,
+  E2E_RATE_LIMITED_TOKEN_2,
+  E2E_REVOKED_TOKEN,
   E2E_USER,
   E2E_USER_NO_HANDLE,
   E2E_USER_RATE_LIMITED,
@@ -70,9 +72,16 @@ await db.insert(user).values([
   { ...E2E_USER_RATE_LIMITED, emailVerified: true },
 ]);
 
+// **createdAt を明示する。** 省略すると now になり、E2E_USER の burst 窓（5分に5件）を
+// 開始時点で2件消費する。投稿するテストが2本あるので、retry が1回走ると上限に当たり、
+// しかも窓が閉じるまで5分待たないと回復しない。埋め草（12時間前）より新しくして、
+// タイムラインの先頭に固定データが並ぶ順序は保つ
+const fixtureCreatedAt = new Date(Date.now() - 60 * 60_000);
+
 await db.insert(entry).values(
   E2E_ENTRIES.map((e) => ({
     userId: E2E_USER.id,
+    createdAt: fixtureCreatedAt,
     slug: e.slug,
     title: e.title,
     trigger: e.trigger,
@@ -113,6 +122,18 @@ const [, limitedToken] = await db
       userId: E2E_USER_RATE_LIMITED.id,
       label: "e2e のレート制限済みトークン",
       tokenHash: await hashToken(E2E_RATE_LIMITED_TOKEN),
+    },
+    {
+      // 同じユーザーの2本目。取り直しても枠が戻らないことの番人
+      userId: E2E_USER_RATE_LIMITED.id,
+      label: "e2e のレート制限済みトークン（2本目）",
+      tokenHash: await hashToken(E2E_RATE_LIMITED_TOKEN_2),
+    },
+    {
+      userId: E2E_USER.id,
+      label: "e2e の失効済みトークン",
+      tokenHash: await hashToken(E2E_REVOKED_TOKEN),
+      revokedAt: new Date(),
     },
   ])
   .returning({ id: agentToken.id });

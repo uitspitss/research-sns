@@ -32,6 +32,14 @@ describe("mcpPostEntryInputSchema（REST より厳しくしている3点）", ()
     expect(mcpPostEntryInputSchema.safeParse({ ...withPath, tigger: "typo" }).success).toBe(false);
   });
 
+  it("logged_on は実在する日付だけを受ける（REST と同じ共通フィールド）", () => {
+    const at = (d: string) =>
+      mcpPostEntryInputSchema.safeParse({ ...withPath, logged_on: d }).success;
+
+    expect(at("2026-02-31")).toBe(false);
+    expect(at("2024-02-29")).toBe(true);
+  });
+
   it("上限と出力の形は REST と揃っている（共通フィールドを使っているため）", () => {
     const parsed = mcpPostEntryInputSchema.parse({ ...withPath, trigger: "  なぜ  " });
     expect(parsed.trigger).toBe("なぜ");

@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { E2E_AGENT_TOKEN, E2E_RATE_LIMITED_TOKEN, E2E_USER } from "./fixture";
+import { E2E_AGENT_TOKEN, E2E_RATE_LIMITED_TOKEN, E2E_REVOKED_TOKEN, E2E_USER } from "./fixture";
 
 /**
- * 唯一の書き込み経路。Web に投稿フォームは無いので、ここが落ちると
- * 誰も投稿できなくなる。
+ * 書き込みの入口のうち REST 側。Web に投稿フォームは無いので、ここと
+ * MCP（api-mcp.spec.ts）が落ちると誰も投稿できなくなる。
+ * 中身はどちらも lib/post-entry.ts の postEntry() を通る。
  */
 
 test("Bearer トークンで投稿できる", async ({ request }) => {
@@ -38,9 +39,19 @@ test("トークンが無いと 401", async ({ request }) => {
   expect(res.status()).toBe(401);
 });
 
-test("失効・偽造トークンでは 401", async ({ request }) => {
+test("偽造トークンでは 401", async ({ request }) => {
   const res = await request.post("/api/entries", {
     headers: { Authorization: "Bearer not-a-real-token" },
+    data: { title: "だめ", body: "- だめ" },
+  });
+
+  expect(res.status()).toBe(401);
+});
+
+// 漏れたトークンを止める手段は失効しかない。ここが黙って壊れると気づけない
+test("失効済みトークンでは 401", async ({ request }) => {
+  const res = await request.post("/api/entries", {
+    headers: { Authorization: `Bearer ${E2E_REVOKED_TOKEN}` },
     data: { title: "だめ", body: "- だめ" },
   });
 

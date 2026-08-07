@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { ENTRY_FIELD_DESCRIPTIONS, entryFields } from "@/lib/entry-input";
+import {
+  ENTRY_FIELD_DESCRIPTIONS,
+  type Exactly,
+  type PostEntryDraft,
+  entryFields,
+} from "@/lib/entry-input";
 import { ENTRY_LIMITS } from "@/lib/limits";
 
 /**
@@ -49,6 +54,11 @@ export const mcpPostEntryInputSchema = z.strictObject({
     .default([])
     .describe(ENTRY_FIELD_DESCRIPTIONS.sources),
 });
+
+// スキーマにフィールドを足しても postEntry() が黙って捨てないことの番人。
+// 何をしているかは lib/entry-input.ts の Exactly を参照
+const mcpMatchesDraft: Exactly<z.infer<typeof mcpPostEntryInputSchema>, PostEntryDraft> = true;
+void mcpMatchesDraft;
 
 export const searchEntriesInputSchema = z.strictObject({
   query: z

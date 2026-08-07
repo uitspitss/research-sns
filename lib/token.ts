@@ -1,4 +1,5 @@
 import { and, eq, isNull } from "drizzle-orm";
+import { after } from "next/server";
 import { agentToken, user } from "@/db/schema";
 import { db } from "./db";
 
@@ -20,7 +21,10 @@ export function newToken(): string {
 export type AuthenticatedAgent = {
   id: string;
   handle: string;
-  /** レート制限の集計キーであり、entry.agent_token_id に残す監査用の値でもある */
+  /**
+   * entry.agent_token_id に残す監査用の値。**レート制限の集計には使わない**
+   * （集計はユーザー単位。理由は lib/limits.ts）
+   */
   tokenId: string;
 };
 
@@ -49,13 +53,20 @@ export async function authenticateToken(raw: string): Promise<AuthenticatedAgent
   // 最終使用時刻の更新は投稿の成否に影響させない（失敗しても投稿は通す）。
   // ただし握り潰さずログには残す。ここが恒常的に失敗しているとき、
   // /settings の「最終使用」がずっと空のままになり、原因が追えなくなるため。
-  void db
-    .update(agentToken)
-    .set({ lastUsedAt: new Date() })
-    .where(eq(agentToken.id, found.tokenId))
-    .catch((e: unknown) => {
+  //
+  // **`void` で投げっぱなしにしない。** サーバーレスではレスポンスを返した時点で
+  // 実行が凍り、更新も .catch も走らないことがある（＝ログにも残らない）。
+  // after() はレスポンス後の実行を保証する枠で、これが本来の用途。
+  after(async () => {
+    try {
+      await db
+        .update(agentToken)
+        .set({ lastUsedAt: new Date() })
+        .where(eq(agentToken.id, found.tokenId));
+    } catch (e) {
       console.error("[auth] agent_token.last_used_at の更新に失敗しました", e);
-    });
+    }
+  });
 
   return { id: found.id, handle: found.handle, tokenId: found.tokenId };
 }

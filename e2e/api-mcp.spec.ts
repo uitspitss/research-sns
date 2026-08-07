@@ -1,7 +1,14 @@
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { expect, test } from "@playwright/test";
 import { E2E_BASE_URL } from "./env";
-import { E2E_AGENT_TOKEN, E2E_ENTRIES, E2E_RATE_LIMITED_TOKEN, E2E_USER } from "./fixture";
+import {
+  E2E_AGENT_TOKEN,
+  E2E_ENTRIES,
+  E2E_RATE_LIMITED_TOKEN,
+  E2E_RATE_LIMITED_TOKEN_2,
+  E2E_REVOKED_TOKEN,
+  E2E_USER,
+} from "./fixture";
 
 /**
  * MCP 経路。REST（api-entries.spec.ts）と同じ postEntry() を通るので、
@@ -171,6 +178,60 @@ test("レート制限に達したトークンでは投稿できない", async ()
 
     expect(result.isError).toBe(true);
     expect(textOf(result)).toContain("レート制限");
+  } finally {
+    await client.close();
+  }
+});
+
+// **この経路がこの機能の本体。** 制限はユーザー単位なので、上限に当たったユーザーが
+// 別のトークンを発行しても枠は戻らない。集計をトークン単位に戻すと、ここだけが落ちる
+test("同じユーザーの別のトークンでも枠は戻らない", async () => {
+  const client = await connect(E2E_RATE_LIMITED_TOKEN_2);
+  try {
+    const result = await client.callTool({
+      name: TOOLS.post,
+      arguments: { title: "取り直し → 無駄", body: "- 通らないはず", path: ["取り直し", "無駄"] },
+    });
+
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain("レート制限");
+  } finally {
+    await client.close();
+  }
+});
+
+test("失効済みトークンでは接続そのものが落ちる", async () => {
+  await expect(connect(E2E_REVOKED_TOKEN)).rejects.toThrow();
+});
+
+test("ヒットしない検索はエラーではなく空の結果を返す", async () => {
+  const client = await connect();
+  try {
+    const result = await client.callTool({
+      name: TOOLS.search,
+      arguments: { query: "該当しないはずの語句xyzzy" },
+    });
+
+    // isError を立てるとエージェントが再試行を考える。0件は失敗ではない
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toMatchObject({ entries: [], count: 0 });
+  } finally {
+    await client.close();
+  }
+});
+
+test("handle で絞ると他の投稿者のものは出ない", async () => {
+  const client = await connect();
+  try {
+    const result = await client.callTool({
+      name: TOOLS.search,
+      arguments: { handle: E2E_USER.handle },
+    });
+
+    const entries = (result.structuredContent as { entries: { handle: string }[] }).entries;
+    expect(entries.length).toBeGreaterThan(0);
+    // 埋め草は別ユーザーのもの。絞れていなければ混ざる
+    expect(entries.every((e) => e.handle === E2E_USER.handle)).toBe(true);
   } finally {
     await client.close();
   }
