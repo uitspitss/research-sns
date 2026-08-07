@@ -28,8 +28,12 @@ Next.js 16 (App Router) + Postgres + Drizzle ORM。Vite ではないので、Vit
 - `db/migrations/` は生成物だがコミットする。手で編集しない
 - ローカルは docker（`nr db:up`）、本番は Neon。`lib/db.ts` が `DATABASE_URL` を見て
   ドライバを切り替える（neon-http / node-postgres）
-- 拡張（`pgcrypto` / `pg_trgm`）は migration に含まれない。ローカルは
-  `db/init/01-extensions.sql`、Neon は手で一度実行する
+- 拡張（`pg_trgm`）は migration に含まれない。ローカルは
+  `db/init/01-extensions.sql`、Neon は手で一度実行する。**migrate より先に**
+  （`0000` の `entry_search_idx` が `gin_trgm_ops` を使うので、無いと migration が落ちる）
+- **DB の locale を `C` にしない。** `pg_trgm` が日本語を英数字と見なさず、
+  検索インデックスが無効化される（全行スキャンになる）。`compose.yaml` は builtin
+  プロバイダの `C.UTF-8` を指定している。理由は README の「設計上のメモ」
 - `entry.search_text` は生成カラムではなく挿入時に確定させる列。
   挿入経路は必ず `buildSearchText()` を通すこと（理由は db/schema.ts のコメント）
 

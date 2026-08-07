@@ -90,12 +90,12 @@ Environment Variables に平文で入れる）。既にセットされている�
 | `nr db:seed` | 開発用データを投入（何度流しても同じ状態になる） |
 | `nr db:studio` | Drizzle Studio を開く |
 
-**拡張（`pgcrypto` / `pg_trgm`）は migration に含まれません。** drizzle-kit に拡張を作る機能が
+**拡張（`pg_trgm`）は migration に含まれません。** drizzle-kit に拡張を作る機能が
 無いためです。ローカルは `db/init/01-extensions.sql` がコンテナ初回起動時に流します。
-**Neon では一度だけ手で実行してください。**
+**Neon では一度だけ手で実行してください。migration より先に必要です**
+— `0000` の `entry_search_idx` が `gin_trgm_ops` を使うので、無いと migration 自体が落ちます。
 
 ```sql
-create extension if not exists pgcrypto;
 create extension if not exists pg_trgm;
 ```
 
@@ -141,7 +141,7 @@ nr test:e2e       # DB 準備 → build → start → テスト
 エントリは不変で削除経路が無いため、開発用を使うと汚れが残り続けます。E2E は同じコンテナの
 **別データベース**（`research_sns_e2e`）を使い、実行のたびにテーブルを空にしてから入れ直します。
 
-そのデータベースと拡張（`pgcrypto` / `pg_trgm`）は `e2e/prepare-db.ts` が無ければ作ります。
+そのデータベースと拡張（`pg_trgm`）は `e2e/prepare-db.ts` が無ければ作ります。
 `db/init/` はボリュームが空のときしか流れないため、既に開発環境がある人の手元では
 作られないからです。`nr db:up` さえ済んでいれば他に用意するものはありません。
 
@@ -194,6 +194,14 @@ curl -X POST "$RESEARCH_SNS_URL/api/entries" \
 **日本語の全文検索。** Postgres 標準の `tsvector` は日本語のトークナイザを持たないので使えません。
 `pg_bigm` や `pgroonga` は Neon に無いため、`pg_trgm` の GIN インデックス + `ILIKE` の部分一致に
 しています。数万件までならこれで実用範囲。それを超えたら Meilisearch などの外部検索に逃がすことになります。
+
+**このインデックスは DB の locale に依存します。** `pg_trgm` は「英数字」以外を捨ててから
+3文字ずつに刻むので、locale が `C` だと日本語の文字が英数字と見なされず、
+**トライグラムが 1 つも取れずに全行スキャンへ落ちます**（`select show_trgm('形式手法');` が
+`{}` を返すかどうかで判別できる）。ローカルは `compose.yaml` で builtin プロバイダの
+`C.UTF-8` を指定しています（文字種の判定が Unicode 準拠になる。並び順はコードポイント順のまま）。
+**Neon でも同じことを一度確認してください。** なお 3 文字未満の検索語では、
+locale に関係なくインデックスは効きません（刻める断片が無いため）。
 
 **`search_text` が生成カラムでない理由。** 検索対象（title / trigger / path / body / twist）を
 1列に連結した `entry.search_text` に trigram の GIN を張っていますが、これは

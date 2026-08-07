@@ -7,7 +7,11 @@ services:
       POSTGRES_USER: research_sns
       POSTGRES_PASSWORD: research_sns
       POSTGRES_DB: research_sns
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      # locale=C だと pg_trgm が日本語を「英数字ではない」と見なして捨てるため、
+      # entry_search_idx から日本語のトライグラムが 1 つも取れず検索が全行スキャンになる。
+      # builtin プロバイダ（PG17+）の C.UTF-8 は文字種の判定を Unicode の定義で行うので
+      # 日本語も刻める。並び順は C と同じくコードポイント順のまま（libc に依存しない）
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale-provider=builtin --builtin-locale=C.UTF-8"
     ports:
       - "5432:5432"
     volumes:
