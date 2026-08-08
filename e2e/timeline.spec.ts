@@ -36,6 +36,14 @@ test("タイムラインの @handle からユーザーページへ移動でき�
   );
 });
 
+test("ヘッダーから設定へ移動できる", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("link", { name: "設定" }).click();
+
+  await expect(page).toHaveURL(/\/settings$/);
+});
+
 test("存在しないエントリは 404 になる", async ({ page }) => {
   const res = await page.goto(`/e/${E2E_USER.handle}/9999-99-99-zzzz`);
 

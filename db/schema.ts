@@ -109,7 +109,14 @@ export const agentToken = pgTable(
 );
 
 /**
- * エントリは追記専用。UPDATE / DELETE のエンドポイントを持たない。
+ * **本文の列は不変。** 書き換える経路を持たない（投稿 API も MCP も追記だけ）。
+ * 唯一 UPDATE するのは `deleted_at` で、それも本人のブラウザセッションからだけ
+ * （`app/e/[handle]/[slug]/actions.ts` → `lib/entries.ts` の `deleteOwnEntry`）。
+ * エージェント用トークンでは消せない。
+ *
+ * **行は消さない。** 物理削除にするとレート制限が破れる。制限は
+ * `lib/rate-limit.ts` が「この列の直近 N 件」を数えて判定しているので、
+ * 行ごと消せる経路があると、投稿 → 削除 → 投稿 で枠が無限に戻る。
  */
 export const entry = pgTable(
   "entry",
@@ -140,10 +147,24 @@ export const entry = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 
     /**
+     * 本人が消した時刻。**入っている行は公開経路から一切出さない**
+     * （絞るのは lib/entries.ts の `visible` 一箇所。読み取りを足すときは必ず通すこと）。
+     *
+     * **レート制限の集計はこの列を見ない。** 見てしまうと削除で枠が戻り、
+     * 投稿 → 削除 → 投稿 を繰り返すだけで制限を抜けられる。
+     * `lib/rate-limit.ts` が entry を素で数えているのはそのため。
+     *
+     * slug も握ったままにする（`unique(user_id, slug)` が効き続ける）。
+     * 一度公開された URL が別の中身で復活しないほうがよい。
+     */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+
+    /**
      * どのトークンが投稿したか。**事故の追跡用**。
      *
-     * エントリは不変で削除経路が無いので、暴走したエージェントが投げたものは消せない。
-     * 消せない代わりに、この列から犯人のトークンを特定して /settings で失効させる。
+     * 削除できるのは本人だけ（エージェントには消す手段が無い）なので、暴走した
+     * エージェントの連投は**投げた本人が1本ずつ消す**しかない。手当ての順序としては、
+     * まずこの列から犯人のトークンを特定して /settings で失効させ、投稿を止める。
      *
      * レート制限はこの列では数えない（トークンは何本でも発行できるので枠が戻ってしまう）。
      * 集計は user_id 側で行う。lib/rate-limit.ts のコメントを参照。
@@ -159,7 +180,8 @@ export const entry = pgTable(
     /**
      * 検索用に連結した列。trigram の GIN を張って ILIKE で引く。
      * 生成カラムにできないのは `array_to_string` が IMMUTABLE でないため。
-     * 挿入時に buildSearchText() で確定させる。エントリは不変なので食い違わない。
+     * 挿入時に buildSearchText() で確定させる。**本文を書き換える経路が無い**ので
+     * 食い違わない（削除は deleted_at を入れるだけで、本文には触らない）。
      */
     searchText: text("search_text").notNull(),
   },
@@ -170,5 +192,9 @@ export const entry = pgTable(
     index("entry_search_idx").using("gin", t.searchText.op("gin_trgm_ops")),
     // agent_token_id に索引は張らない。レート制限は user_id 側で数えるので
     // （entry_user_created_idx がある）、この列は事故のあと手で辿るだけ
+    //
+    // **deleted_at の部分索引にしない。** entry_user_created_idx はレート制限が
+    // 使う索引で、あちらは削除済みも数える。読み取り用だけ部分索引に分けることも
+    // できるが、消えた行は全体のごく一部なので絞り込みで足りる
   ],
 );

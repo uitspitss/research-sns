@@ -15,6 +15,13 @@
       "when": 1786131826199,
       "tag": "0001_sleepy_rumiko_fujikawa",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786202577977,
+      "tag": "0002_ancient_the_phantom",
+      "breakpoints": true
     }
   ]
 }

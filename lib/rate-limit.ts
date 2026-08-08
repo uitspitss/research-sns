@@ -51,6 +51,11 @@ export function rateLimitVerdict(states: RateLimitWindowState[], now: Date): Rat
  * COUNT を取らず「上限番目に新しい行」の時刻だけを引く。
  * entry_user_created_idx のレンジスキャン1回で済み、件数が増えても重くならない。
  *
+ * **`deleted_at` で絞らない。意図的。** 絞ると本人が消すたびに枠が戻り、
+ * 投稿 → 削除 → 投稿 を繰り返すだけで制限を抜けられる。削除が公開表示を消す機能で
+ * あって投稿の取り消しではないのは、ここが理由（db/schema.ts の deleted_at も参照）。
+ * 表示用の絞り込みは lib/entries.ts の `visible` が持っていて、こちらとは別物。
+ *
  * **これは逐次の投稿にしか効かない。** 判定と insert が別クエリなので、
  * Promise.all で同時に投げられると全員が同じ「まだ空いている」を読み、
  * 超過は並列度ぶんになる（「数件」では収まらない）。
