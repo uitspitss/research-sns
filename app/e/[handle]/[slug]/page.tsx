@@ -3,6 +3,7 @@ import { EntryBody } from "@/components/entry-body";
 import { PathTrail } from "@/components/path-trail";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { findEntry } from "@/lib/entries";
+import { DeleteEntry } from "./delete-entry";
 
 export const revalidate = 300;
 
@@ -61,6 +62,9 @@ export default async function EntryPage({
             </ul>
           </div>
         )}
+
+        {/* 所有者のときだけ中身が出る。判定はクライアント側（ISR を保つため） */}
+        <DeleteEntry handle={e.handle} slug={e.slug} />
       </article>
     </main>
   );

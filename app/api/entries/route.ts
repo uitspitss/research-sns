@@ -8,7 +8,8 @@ import { parseEntriesQuery } from "./schema";
  * POST /api/entries
  * Authorization: Bearer <token>
  *
- * 追記のみ。更新も削除もエンドポイントを用意していない。
+ * 追記のみ。更新も削除もこの API には無い（削除は本人がブラウザから開いたときだけ。
+ * トークンは追記しかできない鍵のままにしてある）。
  * ここに投げたものは全部公開される。
  *
  * 中身は lib/post-entry.ts。この関数は HTTP と業務ロジックの間の変換だけを持つ

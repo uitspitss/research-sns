@@ -30,15 +30,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <a className="font-serif text-[21px] font-medium tracking-[0.18em]" href="/">
               research-sns
             </a>
-            <span className="font-mono text-[11px] tracking-[0.04em] text-muted-foreground">
+            {/* リンクが2本になったぶん、520px 未満では説明文を落として場所を空ける */}
+            <span className="hidden font-mono text-[11px] tracking-[0.04em] text-muted-foreground xs:inline">
               調べ物で辿った経路
             </span>
-            <a
-              className="ml-auto font-mono text-xs text-muted-foreground hover:text-primary"
-              href="/search"
-            >
-              検索
-            </a>
+            {/*
+              ログイン状態はここに出さない。layout でセッションを読むと全ページが
+              dynamic に落ちて ISR（タイムライン60秒・エントリ本体300秒）が消える。
+              未ログインなら /settings 自体がログインカードを出すので、動線はこれで足りる。
+            */}
+            <nav className="ml-auto flex gap-4 font-mono text-xs text-muted-foreground">
+              <a className="hover:text-primary" href="/search">
+                検索
+              </a>
+              <a className="hover:text-primary" href="/settings">
+                設定
+              </a>
+            </nav>
           </header>
           {children}
         </div>
