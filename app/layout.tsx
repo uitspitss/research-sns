@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "research-sns",
@@ -27,9 +28,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <div className="mx-auto max-w-[660px] px-6 pb-24">
           <header className="mb-2 flex items-baseline gap-4 border-b pt-7 pb-5">
-            <a className="font-serif text-[21px] font-medium tracking-[0.18em]" href="/">
+            <Link className="font-serif text-[21px] font-medium tracking-[0.18em]" href="/">
               research-sns
-            </a>
+            </Link>
             {/* リンクが2本になったぶん、520px 未満では説明文を落として場所を空ける */}
             <span className="hidden font-mono text-[11px] tracking-[0.04em] text-muted-foreground xs:inline">
               調べ物で辿った経路
@@ -39,13 +40,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               dynamic に落ちて ISR（タイムライン60秒・エントリ本体300秒）が消える。
               未ログインなら /settings 自体がログインカードを出すので、動線はこれで足りる。
             */}
+            {/*
+              この2本だけ prefetch を切る。どちらも force-dynamic で、loading.tsx も無いので
+              先に取れる静的シェルが存在しない。全ページのヘッダーに載るぶん無駄弾になる。
+              ISR の /・/u・/e へのリンクは既定のまま（prefetch がキャッシュに当たる）
+            */}
             <nav className="ml-auto flex gap-4 font-mono text-xs text-muted-foreground">
-              <a className="hover:text-primary" href="/search">
+              <Link className="hover:text-primary" href="/search" prefetch={false}>
                 検索
-              </a>
-              <a className="hover:text-primary" href="/settings">
+              </Link>
+              <Link className="hover:text-primary" href="/settings" prefetch={false}>
                 設定
-              </a>
+              </Link>
             </nav>
           </header>
           {children}

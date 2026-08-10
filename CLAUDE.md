@@ -267,8 +267,9 @@ CSS2 が返すファイルは全部ダウンロードする）。コールドビ
 
 - `nextjs/no-page-custom-font`: off — Pages Router の `_document.js` 前提のルールで、
   App Router の `app/layout.tsx` に font link を置くのは正しいため誤検知
-- `nextjs/no-html-link-for-pages`: warn — 内部リンクが `<a>` のまま。`next/link` に寄せると
-  クライアント遷移になるが、静的寄りの読み物サイトなので現状は許容。移行するなら一括で
+- `nextjs/no-html-link-for-pages`: error — 内部リンクは `next/link` に移行済み。
+  **外部リンク（`app/e/[handle]/[slug]/page.tsx` の出典）は `<a>` のまま**。
+  `next/link` は内部遷移のためのもので、`target="_blank"` の外部 URL には要らない
 - `import/no-unassigned-import`: `*.css` を許可 — `import "./globals.css"` は Next の定石
 
 ## フォーマッタの対象外
