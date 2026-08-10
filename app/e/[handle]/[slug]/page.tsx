@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EntryBody } from "@/components/entry-body";
 import { PathTrail } from "@/components/path-trail";
@@ -21,7 +22,7 @@ export default async function EntryPage({
     <main>
       <article className="py-[30px]">
         <div className="flex gap-3 font-mono text-[11.5px] tracking-[0.03em] text-muted-foreground">
-          <a href={`/u/${e.handle}`}>@{e.handle}</a>
+          <Link href={`/u/${e.handle}`}>@{e.handle}</Link>
           <time>{e.loggedOn}</time>
         </div>
         <h1 className="mt-2.5 font-serif text-[22px] leading-[1.5] font-medium xs:text-[27px]">

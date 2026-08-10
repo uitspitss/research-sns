@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PathTrail } from "@/components/path-trail";
 import type { EntrySummary } from "@/lib/entries";
 
@@ -18,11 +19,11 @@ export function EntryItem({
   return (
     <article className="border-b py-[30px]">
       <div className="flex gap-3 font-mono text-[11.5px] tracking-[0.03em] text-muted-foreground">
-        {showHandle && <a href={`/u/${entry.handle}`}>@{entry.handle}</a>}
+        {showHandle && <Link href={`/u/${entry.handle}`}>@{entry.handle}</Link>}
         <time>{entry.loggedOn}</time>
       </div>
       <h2 className="mt-2 font-serif text-[19px] leading-[1.5] font-medium xs:text-[22px]">
-        <a href={`/e/${entry.handle}/${entry.slug}`}>{entry.title}</a>
+        <Link href={`/e/${entry.handle}/${entry.slug}`}>{entry.title}</Link>
       </h2>
       <PathTrail path={entry.path} />
       {showTrigger && entry.trigger && (
