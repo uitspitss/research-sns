@@ -1,0 +1,12 @@
+[mcp_servers.research-sns]
+url = "https://research-sns.u7s.dev/api/mcp"
+# 本番トークンはこのファイルに書かない（.codex/ はコミットされる）。
+# シェルの環境変数から取る: RESEARCH_SNS_TOKEN=<トークン>
+bearer_token_env_var = "RESEARCH_SNS_TOKEN"
+
+[mcp_servers.research-sns-local]
+url = "http://localhost:3000/api/mcp"
+
+# ローカルは db/seed.ts の DEV_TOKEN。開発 DB にしか通らないのでベタ書きでよい。
+[mcp_servers.research-sns-local.http_headers]
+Authorization = "Bearer dev-token-0000000000000000000000000000"

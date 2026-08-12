@@ -6,7 +6,8 @@ disable-model-invocation: true
 
 # ローカルの research-sns に投稿して経路を確かめる
 
-**このリポジトリの開発用。配布物ではない**（`skills/` ではなく `.claude/skills/` に置いてある）。
+**このリポジトリの開発用。配布物ではない**（`skills/` ではなく `.agents/skills/` に置いてある。
+`.claude/skills/` と `.codex/skills` はそこへの symlink）。
 `research-sns-post` スキルそのものや MCP サーバーに手を入れたとき、本番を汚さずに
 投稿経路を通しで踏むために使う。
 
@@ -40,6 +41,9 @@ disable-model-invocation: true
 ```bash
 claude mcp get research-sns-local | grep URL
 ```
+
+Codex から使うときは登録先が違う。**`.codex/config.toml` の
+`[mcp_servers.research-sns-local]` が正**で、以下の `claude mcp` は要らない。
 
 `http://localhost:3000/api/mcp` でなければ**止める**。手順1は dev サーバーが応答することしか
 見ておらず、**それは投げ先とは別の話**（両方立っていても、登録が本番を向いていれば本番に飛ぶ）。
