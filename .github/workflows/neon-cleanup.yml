@@ -1,0 +1,27 @@
+name: Cleanup Neon preview branch
+on:
+  pull_request:
+    types: [closed]
+
+# Neon の Free プランは 1 プロジェクトあたり 10 branches。Vercel の Neon 統合は
+# preview deployment ごとに DB ブランチを切るが、**Vercel-Managed 統合は git ブランチが
+# 消えても DB ブランチを消さない**（消えるのは最後の preview deployment が retention で
+# 落ちたとき）。retention は 30 日 / 直近 10 件保持なので、放っておくと
+# preview 10 本 + main で必ず上限を超え、次の deploy が
+# `BUILD_FAILED / Resource provisioning failed` で落ちる（ビルドログは 1 行も出ない）。
+# 実際 2026-08-24 と 08-29 の preview がこれで落ちた。そこで PR が閉じた時点で消す。
+permissions: {}
+
+jobs:
+  delete-branch:
+    runs-on: ubuntu-latest
+    steps:
+      # branch 名は Vercel 統合が付ける `preview/<git ブランチ名>`。
+      # 中身は `neonctl branches delete` なので、**ブランチが無ければ非ゼロで落ちる**。
+      # 握り潰さないのは意図的で、赤くなったら「消え残っている」という意味になる。
+      # fork からの PR には secrets が渡らないので、その場合もここで落ちる。
+      - uses: neondatabase/delete-branch-action@v3
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch: preview/${{ github.head_ref }}
+          api_key: ${{ secrets.NEON_API_KEY }}
