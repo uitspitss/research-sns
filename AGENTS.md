@@ -78,7 +78,7 @@ DB 接続まで背負う**。実際、上限値を `lib/token.ts` に置いた�
 
 `nr dev` は Turborepo 経由で **Next の dev サーバーと Drizzle Studio を同時に起動**する。
 
-- **Codex など非対話環境から動かすときは `nr dev:stream` を使う。**
+- **非対話環境（Claude Code / Codex など）から動かすときは `nr dev:stream` を使う。**
   Turborepo の既定 TUI は表示が崩れる
 - Next だけ動かしたいときは `nr dev:next`
 - モノレポではない。`turbo.json` はこの2タスクの並列起動のためだけに置いている
@@ -315,7 +315,7 @@ emphasis のアンダースコアを壊すバグがあるため。
 復号できなかった暗号文（`"encrypted:..."`）が入るので、**CI の `env:` はアプリが使う変数を
 全部列挙する**こと。
 
-## 推奨 Codex スキル
+## 推奨スキル
 
 - frontend-design - フロントエンド UI 作成
 

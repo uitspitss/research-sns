@@ -3,7 +3,7 @@ import { E2E_AUTH_SECRET, E2E_BASE_URL, E2E_DATABASE_URL, E2E_PORT } from "./e2e
 
 /**
  * E2E は「アプリが起動して主要導線が生きている」ことの番人。
- * 仕様の網羅は vitest 側（`nr test`）に置く。境界は CLAUDE.md の「テスト」を参照。
+ * 仕様の網羅は vitest 側（`nr test`）に置く。境界は AGENTS.md の「テスト」を参照。
  *
  * DB の準備（migration とデータ投入）は Playwright ではなく `nr test:e2e` の
  * 前段で走る。理由は e2e/prepare-db.ts のコメントに書いてある。

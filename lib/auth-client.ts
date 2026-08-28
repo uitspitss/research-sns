@@ -1,7 +1,7 @@
 import { inferAdditionalFields } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 // **型だけ。値として import しない。** lib/auth.ts は lib/db を掴んでいて、
-// import した時点で DATABASE_URL を要求する（CLAUDE.md「定数を DB を掴む
+// import した時点で DATABASE_URL を要求する（AGENTS.md「定数を DB を掴む
 // ファイルに置かない」）。`import type` は消えるのでブラウザには何も入らない。
 import type { auth } from "./auth";
 
