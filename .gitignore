@@ -12,7 +12,8 @@ next-env.d.ts
 
 # 環境変数（dotenvx）。暗号化された .env はコミットする。復号キーだけ除外する
 .env.keys
-.env.local
+# .env.production.local など vercel env pull の出力先もまとめて除外する
+.env*.local
 
 # Vercel
 .vercel/
