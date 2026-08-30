@@ -19,5 +19,5 @@ jobs:
           # base SHA を depth 1 で fetch するが、届かないと「変更ファイル内の全指摘」に
           # 劣化して警告が出る。履歴が浅いリポジトリなので full clone のコストは無視できる
           fetch-depth: 0
-      - uses: millionco/react-doctor@v2
+      - uses: millionco/react-doctor@013f7373f91a3b9e68bd1dc7d4d354f4b041b117 # v2.2.9
         continue-on-error: true
