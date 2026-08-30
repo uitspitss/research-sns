@@ -29,8 +29,9 @@ CSRF も投稿画面も存在しません。
 mise install
 ni
 
-# 1. 復号キーを置く（.env.keys をチームから安全な経路で受け取る）
-#    暗号化された .env はリポジトリに入っているので、キーを置くだけで動く
+# 1. 環境変数を用意する（詳細は下記）
+#    メンテナ: .env.keys（復号キー）を置くだけ。暗号化された .env はリポジトリに入っている
+#    それ以外: 復号キーは配っていないので .env を作り直す
 $EDITOR .env.keys
 
 # 2. ローカル DB を起動して、スキーマとシードを入れる
@@ -68,6 +69,23 @@ nr env:get                                   # 復号して一覧表示（値が
 | `BETTER_AUTH_SECRET` | セッション Cookie の署名鍵。`openssl rand -base64 32` で作る（32文字以上必須） |
 | `BETTER_AUTH_URL` | アプリの公開 URL。OAuth コールバックの組み立てに使う |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) で OAuth クライアント（Web）を作る |
+
+**フォークして動かす場合は `.env` を作り直してください。** `.env.keys` は配っていないので、
+入っている暗号文は復号できません。`dotenvx set` は `.env` が無ければ鍵ごと作るので、
+消してから入れ直すだけです。
+
+```bash
+rm .env
+nr env:set DATABASE_URL "postgres://research_sns:research_sns@localhost:5432/research_sns"
+nr env:set BETTER_AUTH_SECRET "$(openssl rand -base64 32)"
+nr env:set BETTER_AUTH_URL "http://localhost:3000"
+nr env:set GOOGLE_CLIENT_ID "<自分で作った OAuth クライアント>"
+nr env:set GOOGLE_CLIENT_SECRET "<同上>"
+```
+
+**`.env.local` に置く方法は効きません。** Next の dev サーバーは読みますが、`package.json` の
+スクリプトは `dotenvx run --` を通っていて、そちらは `.env` しか見ないためです。
+シェルの環境変数として渡す方法は効きます（dotenvx は既にセットされている値を上書きしません）。
 
 Google 側の「承認済みのリダイレクト URI」に以下を登録してください。
 
@@ -121,8 +139,11 @@ create extension if not exists pg_trgm;
 | `nr knip` | 未使用コード・依存関係の検出 |
 
 コミット時に lefthook が oxlint / oxfmt / typecheck を、push 時に knip を走らせます。
-CI（GitHub Actions）でも同じ一式を回します。CI の `nr build` には
-リポジトリ Secrets の `DATABASE_URL` が要ります。
+CI（GitHub Actions）でも同じ一式を回します。**CI は Secrets を使いません。**
+`.env.keys` を置かないので dotenvx は `.env` を復号できず、代わりに使い捨ての Postgres を
+サービスコンテナで立てて、アプリが使う環境変数をワークフローに直接書いています
+（埋め漏らすとその変数には暗号文がそのまま入るので、全部列挙してあります）。
+fork からの PR でもそのまま動きます。
 
 ### E2E（Playwright）
 
