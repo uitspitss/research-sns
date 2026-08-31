@@ -87,12 +87,14 @@ nr env:set GOOGLE_CLIENT_SECRET "<同上>"
 スクリプトは `dotenvx run --` を通っていて、そちらは `.env` しか見ないためです。
 シェルの環境変数として渡す方法は効きます（dotenvx は既にセットされている値を上書きしません）。
 
-Google 側の「承認済みのリダイレクト URI」に以下を登録してください。
+Google 側の「承認済みのリダイレクト URI」には、そのクライアントを使う URL だけを登録します。
 
 ```
 http://localhost:3000/api/auth/callback/google
-https://research-sns.u7s.dev/api/auth/callback/google
 ```
+
+**ローカル用とデプロイ先用でクライアントを分けてください。** 1つにまとめて両方の URI を
+登録すると、ローカルで使うシークレットがそのまま本番のシークレットになります。
 
 **Vercel には環境変数を直接設定します**（`.env.keys` を置く代わりに、Vercel の
 Environment Variables に平文で入れる）。既にセットされている環境変数は dotenvx が
