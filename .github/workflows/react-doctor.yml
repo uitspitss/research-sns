@@ -13,7 +13,7 @@ jobs:
   react-doctor:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           # react-doctor は既定の scope: changed で base と比較する。action 側も
           # base SHA を depth 1 で fetch するが、届かないと「変更ファイル内の全指摘」に

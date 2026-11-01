@@ -42,7 +42,7 @@ jobs:
       GOOGLE_CLIENT_SECRET: ""
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
       - run: nci
 
@@ -101,7 +101,7 @@ jobs:
       GOOGLE_CLIENT_SECRET: ""
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
       - run: nci
 
@@ -114,7 +114,7 @@ jobs:
       - run: nr test:e2e
 
       # failure() だと flaky（retry で通った）ケースの trace が取れない
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: ${{ !cancelled() }}
         with:
           name: playwright-report
